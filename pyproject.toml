@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "majlis"
+dynamic = ["version"]
+description = "An agent team and working rules for Claude Code projects, and the CLI that keeps them in step."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Ahmed Shaher" }]
+keywords = ["claude-code", "agents", "project-template", "cli"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development",
+]
+dependencies = []
+
+[project.scripts]
+majlis = "majlis.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/ashaherb/majlis"
+Repository = "https://github.com/ashaherb/majlis"
+Issues = "https://github.com/ashaherb/majlis/issues"
+Changelog = "https://github.com/ashaherb/majlis/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+packages = ["majlis"]
+include-package-data = false
+
+[tool.setuptools.dynamic]
+version = { attr = "majlis.__version__" }

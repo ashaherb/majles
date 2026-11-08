@@ -1,0 +1,41 @@
+#!/bin/sh
+# Shared with the Majlis template: do not edit here. Put this project's own checks in
+# .githooks/pre-push.local, which this hook runs after the main-branch guard.
+#
+# Refuses any push to main: main changes only through a merged pull request
+# (.claude/rules/git.md). Turn it on once per clone:
+#   git config core.hooksPath .githooks
+# The first push of a new repo, before a pull request can exist:
+#   ALLOW_MAIN_PUSH=1 git push -u origin main
+refs=$(cat)
+if [ "${ALLOW_MAIN_PUSH:-}" != 1 ]; then
+  printf '%s\n' "$refs" | while read -r _lref _lsha rref _rsha; do
+    if [ "$rref" = refs/heads/main ]; then
+      echo "pre-push: refusing to push to main. Push a branch and open a pull request (.claude/rules/git.md)." >&2
+      exit 1
+    fi
+  done || exit 1
+fi
+# Warns, never refuses, when a branch adds more than PR_ADDED_LIMIT lines over
+# main, deletions and lockfiles not counted (.claude/rules/git.md).
+limit="${PR_ADDED_LIMIT:-1000}"
+if git rev-parse -q --verify origin/main >/dev/null; then
+  printf '%s\n' "$refs" | while read -r _lref lsha rref _rsha; do
+    case "$lsha" in ''|*[!0]*) ;; *) continue ;; esac
+    [ "$rref" = refs/heads/main ] && continue
+    base=$(git merge-base origin/main "$lsha" 2>/dev/null) || continue
+    # Lockfiles by name: a `*lock*` pattern would also drop paths like blocks/ or clock.ts.
+    added=$(git diff --numstat "$base" "$lsha" -- . ':(exclude,glob)**/pnpm-lock.yaml' \
+      ':(exclude,glob)**/package-lock.json' ':(exclude,glob)**/*.lock' ':(exclude,glob)**/*.lockb' |
+      awk '$1 != "-" { n += $1 } END { print n + 0 }')
+    if [ "$added" -gt "$limit" ]; then
+      echo "pre-push: warning: ${rref#refs/heads/} adds $added lines over main (limit $limit, deletions and lockfiles not counted). Split it into pull requests a person can review (.claude/rules/git.md)." >&2
+    fi
+  done
+fi
+local_hook="$(dirname "$0")/pre-push.local"
+if [ -x "$local_hook" ]; then
+  printf '%s\n' "$refs" | "$local_hook" "$@"
+  exit $?
+fi
+exit 0

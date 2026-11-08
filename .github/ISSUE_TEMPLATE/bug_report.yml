@@ -1,0 +1,33 @@
+name: Bug report
+description: Something Majlis did that it should not have, or did not do.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran or asked for, what you expected, and what happened instead. Paste error text as text.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce it
+      description: The smallest set of steps that shows it, starting from a new project if you can.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Majlis version or commit
+      placeholder: "0.1.0, or a commit hash"
+  - type: input
+    id: env
+    attributes:
+      label: OS, Python and Claude Code versions
+      placeholder: "macOS 15, Python 3.12, Claude Code 2.x"
+  - type: input
+    id: modules
+    attributes:
+      label: Modules enabled
+      placeholder: "core, ui, i18n"

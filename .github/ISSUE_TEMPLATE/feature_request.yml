@@ -1,0 +1,20 @@
+name: Idea
+description: A new agent, rule, module, or change to how Majlis works.
+labels: [idea]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What went wrong or took too long in a real project. A concrete case beats a general wish.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+      description: Say whether it belongs in every project (a shared file) or only some (a module).
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you considered instead

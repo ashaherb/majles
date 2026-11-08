@@ -1,0 +1,31 @@
+.DS_Store
+
+# Secrets: never committed. Commit .env.example instead.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+service-account*.json
+
+# Screenshots from the latest try; regenerated, published with the status page
+docs/status/screens/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Node, if the stack ADR picks it
+node_modules/
+dist/
+build/
+.cache/
+
+# Editors
+.idea/
+.vscode/
+*.swp
+

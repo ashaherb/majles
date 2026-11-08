@@ -1,0 +1,76 @@
+# Every file the template ships, sorted into modules.
+#
+#   shared  owned by Majlis. `majlis sync` keeps projects identical to it.
+#           A shared file must never contain a {{PLACEHOLDER}}.
+#   once    a template copied when the project or module is created. The project
+#           owns it from then on, and sync never touches it again.
+#
+# `src -> dest` when the file lands somewhere else in the project.
+# New projects get [core] and [ui]. The others are added with `majlis enable`.
+
+[core]
+shared .claude/agents/architect.md
+shared .claude/agents/builder.md
+shared .claude/agents/critic.md
+shared .claude/agents/ops.md
+shared .claude/agents/product.md
+shared .claude/agents/researcher.md
+shared .claude/agents/security.md
+shared .claude/agents/tester.md
+shared .claude/agents/100x-engineer.md
+shared .claude/rules/agents.md
+shared .claude/rules/asking.md
+shared .claude/rules/majlis.md
+shared .claude/rules/code-organization.md
+shared .claude/rules/decisions.md
+shared .claude/rules/done.md
+shared .claude/rules/git.md
+shared .claude/rules/ownership.md
+shared .claude/rules/research.md
+shared .claude/rules/tokens.md
+shared .claude/rules/working-style.md
+shared .githooks/pre-push
+shared docs/adr/README.md
+shared docs/research/README.md
+shared docs/reviews/README.md
+shared docs/security/README.md
+shared docs/engineering/README.md
+shared docs/specs/README.md
+shared docs/status/README.md
+shared ops/README.md
+shared plan/README.md
+shared tools/render_decisions.py
+shared tools/test_render_decisions.py
+shared tools/render_status.py
+shared tools/test_render_status.py
+once   template/CLAUDE.md -> CLAUDE.md
+once   template/README.md -> README.md
+once   .gitignore
+once   .claude/settings.json
+once   .claude/rules/constraints.md
+once   .claude/rules/git-account.md
+once   docs/research/backlog.md
+once   docs/direction.md
+
+[ui]
+shared .claude/agents/designer.md
+shared design/README.md
+
+[i18n]
+shared optional/i18n/.claude/rules/i18n.md -> .claude/rules/i18n.md
+
+[content]
+shared optional/content/.claude/agents/editor.md -> .claude/agents/editor.md
+once   optional/content/content/README.md -> content/README.md
+
+[ai]
+shared optional/ai/.claude/agents/ai.md -> .claude/agents/ai.md
+shared optional/ai/.claude/rules/ai.md -> .claude/rules/ai.md
+shared optional/ai/evals/README.md -> evals/README.md
+
+[legal]
+shared optional/legal/.claude/agents/legal.md -> .claude/agents/legal.md
+shared optional/legal/docs/legal/README.md -> docs/legal/README.md
+
+[beads]
+shared optional/beads/.claude/rules/beads.md -> .claude/rules/beads.md

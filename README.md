@@ -14,8 +14,8 @@ protocol that only investigates what blocks the next step, and a decision log
 you can publish as a page. It ships no stack and no product code. Those are the
 first decisions your project makes, with the team.
 
-> **Status: pre-release.** Majlis is not on PyPI yet. Until it is, install it
-> from a clone (below).
+> **Status: pre-release.** Majlis is not on PyPI yet. Until it is, clone this
+> repo and run `pipx install ./majlis`, or run it without installing (below).
 
 ## Quick start
 

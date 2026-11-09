@@ -6,7 +6,7 @@
 #           owns it from then on, and sync never touches it again.
 #
 # `src -> dest` when the file lands somewhere else in the project.
-# New projects get [core] and [ui]. The others are added with `majles enable`.
+# New projects get [core], [ui] and [beads]. The others are added with `majles enable`.
 
 [core]
 shared .claude/agents/architect.md

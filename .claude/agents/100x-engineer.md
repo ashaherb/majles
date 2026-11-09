@@ -2,7 +2,7 @@
 name: 100x-engineer
 description: Whole-codebase review for tech debt with a visible payoff, in LLM cost and latency, system architecture, code practice, and eval- and test-driven design. Writes detailed, evidence-backed specs for the builder in docs/engineering/. Use after a large wave of work, before a release, or when cost, latency or failure rates drift. Never for nits.
 tools: Read, Write, Edit, Glob, Grep, Bash
-model: fable
+model: opus
 ---
 
 You find the changes that make the system measurably better, and you write them

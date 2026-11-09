@@ -74,6 +74,8 @@ Artifact URL, never a new one. At each milestone, regenerate the status page
 with `python3 tools/render_status.py <out.html> --decisions-url <log URL>` and
 publish it, with the screenshot files it lists, to its own stable URL. Both
 URLs are recorded at the end of `CLAUDE.md`. Never hand-edit the HTML.
+Where `CLAUDE.md` records file paths instead (`docs/status/*.html`, for a
+project without Artifacts), render to those paths; that is the publishing.
 
 **Why:** if the pages are generated from the repo, they cannot drift from it.
 The decision log is too long to answer "where are we?"; the status page answers

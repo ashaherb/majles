@@ -158,7 +158,7 @@ so it stays silent.
 | security | The threat model; reviews changes to auth, data, secrets | Opus |
 | ops | Deployment, CI, monitoring, backups, runbooks | Sonnet |
 | researcher | Answers research requests at a set depth, with sources | Sonnet |
-| 100x-engineer | Whole-codebase review before a release; writes the builder's specs | Fable |
+| 100x-engineer | Whole-codebase review before a release; writes the builder's specs | Opus |
 
 **The rules.** Short working rules in `.claude/rules/`, each with the reason it
 exists: research only what blocks the next step; record each decision in

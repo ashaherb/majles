@@ -125,3 +125,23 @@ the project's own instructions would stop loading until setup ran.
 **Consequence:** adopt still never overwrites a file the project owns. The setup
 block does not load in an adopted project until the merge, so adopt ends by telling
 the user to start setup from `SETUP.md`.
+
+## 9. Every agent runs on Opus or Sonnet
+
+Problem. The 100x-engineer was pinned to `model: fable` (issue #25). Fable is a
+model Claude Code gates behind its own consent and usage limit, so not every plan
+has it. What Claude Code does when a subagent's pinned model is not on the plan is
+unverified: its settings say `fallbackModel` is tried when a model is "overloaded
+or unavailable", but not whether that covers a subagent's pin.
+
+Choice. The 100x-engineer runs on Opus, like the other agents that judge. The team
+then needs only Opus and Sonnet, and nothing depends on unverified fallback
+behaviour. Keeping Fable and documenting the fallback was the alternative: better
+reviews for those who have it, and a silent downgrade or a failure for those who do
+not.
+
+**Consequence:** a test fails if any shipped agent pins a model other than `opus`
+or `sonnet`. A user who has Fable detaches the agent and changes its `model:` line.
+
+**Still open:** whether the 100x-engineer should go back to Fable once every plan
+has it.

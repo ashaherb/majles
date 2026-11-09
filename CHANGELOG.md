@@ -52,6 +52,18 @@ reserves the name.)
   module off. Nothing is deleted.
 - **The SessionStart hook stays quiet without Majles.** It runs
   `majles check` only when `majles` is on your PATH, and never fails a session.
+- **The 100x-engineer runs on Opus**, not Fable, so every agent needs only
+  Opus or Sonnet. To keep it on Fable, run
+  `majles detach .claude/agents/100x-engineer.md` before you sync, and the
+  file stays as it is.
+- **Projects without Artifacts keep the decision log as files.** The
+  decisions rule now says that where `CLAUDE.md` records
+  `docs/status/decisions.html` and `docs/status/status.html` instead of
+  URLs, rendering to those paths is the publishing. New projects ignore
+  `docs/status/*.html` in git; add that line to your `.gitignore` if you use it.
+- **Setup installs Beads without Homebrew**, from npm or the checked release
+  binary, and turns the module off when it cannot. This changes only
+  `SETUP.md`, which new projects get.
 
 ### How sync knows what you received
 

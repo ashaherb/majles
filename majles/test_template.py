@@ -114,6 +114,18 @@ class Manifest(unittest.TestCase):
         modules = {m for m, _, _, _ in ENTRIES}
         self.assertTrue(set(bp.DEFAULT_MODULES) <= modules)
 
+    def test_the_manifest_header_names_the_default_modules(self):
+        # Issue #26: the comment said core and ui while `new` also turned on beads.
+        header = next(l for l in text(bp.MANIFEST).splitlines() if l.startswith("# New projects get"))
+        self.assertEqual(set(re.findall(r"\[(\w+)\]", header)), set(bp.DEFAULT_MODULES))
+
+    def test_every_agent_pins_opus_or_sonnet(self):
+        # Issue #25: a model some plans lack (fable) left the agent unusable on those plans.
+        for _, _, src, dest in ENTRIES:
+            if dest.startswith(".claude/agents/"):
+                model = next(l for l in text(src).splitlines() if l.startswith("model:"))
+                self.assertIn(model.split(":", 1)[1].strip(), ("opus", "sonnet"), dest)
+
 
 class Placeholders(unittest.TestCase):
     def test_shared_files_contain_none(self):
@@ -143,6 +155,21 @@ class SetupGuide(unittest.TestCase):
         repo = self.section("4. Repo")
         self.assertIn("An existing repo", repo.split("1. `git init", 1)[0])
         self.assertIn("An adopted project", self.section("6. Finish"))
+
+    def test_beads_installs_without_homebrew_or_turns_off(self):
+        # Issue #23: brew and npm -g were the only ways in, so Linux without Homebrew stopped.
+        beads = self.section("4b. The work queue (beads module, on by default)")
+        for way in ("brew install beads", "npm i -g @beads/bd", "gh release download",
+                    "checksums.txt", "--prefix ~/.local", "majles disable beads"):
+            self.assertIn(way, beads)
+        self.assertNotIn("sudo npm", beads)
+
+    def test_the_decision_log_falls_back_to_files_without_artifacts(self):
+        # Issue #24: setup assumed every session can publish Artifacts.
+        log = self.section("5. Decision log")
+        self.assertIn("python3 tools/render_decisions.py docs/status/decisions.html", log)
+        self.assertIn("--decisions-url decisions.html", log)
+        self.assertIn("docs/status/*.html", text(".gitignore").splitlines())
 
 
 class Neutrality(unittest.TestCase):

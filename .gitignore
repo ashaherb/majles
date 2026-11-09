@@ -10,6 +10,8 @@ service-account*.json
 
 # Screenshots from the latest try; regenerated, published with the status page
 docs/status/screens/
+# The rendered pages, where a project keeps them as files instead of Artifacts
+docs/status/*.html
 
 # Python
 __pycache__/

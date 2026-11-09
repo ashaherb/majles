@@ -83,13 +83,12 @@ test after being told not to.
 
 ## Models
 
-The 100x-engineer runs on Fable, after a large wave of work or before a
-release: it reviews the whole codebase and writes the builder's specs.
-Architect, product, designer, critic, security, editor and ai run on Opus:
-they judge and decide. The builder runs on Opus too: the code it writes is what
-the product is. The researcher, legal, tester and ops run on Sonnet: they gather
-evidence within a set depth, draft for counsel, or carry out what specs, ADRs
-and runbooks already say.
+Architect, product, designer, critic, security, editor, ai, the builder and
+the 100x-engineer run on Opus: they judge, decide, or write what the product
+is. The researcher, legal, tester and ops run on Sonnet: they gather evidence
+within a set depth, draft for counsel, or carry out what specs, ADRs and
+runbooks already say. No agent needs a model beyond those two; to run one on
+another, such as Fable, `majles detach` its file and change its `model:`.
 `.claude/settings.json` sets a session-wide `fallbackModel` of Opus, which
 triggers only when a model is overloaded or unavailable, **not on rate limits**.
 

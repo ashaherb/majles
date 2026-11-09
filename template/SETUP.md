@@ -131,10 +131,41 @@ Beads (`bd`) and its board, beads-ui, are both open source (MIT), self-hosted
 and free. Nothing here talks to a hosted service. `<prefix>` is a short issue
 prefix, such as the slug's initials.
 
-```bash
-brew install beads              # or the GitHub release binary, checked against checksums.txt
-npm i -g beads-ui               # the board: bdui
+First see what is already there: `command -v bd bdui`, `node --version`,
+`command -v brew`. Install only what is missing, and stop at the first way that
+works.
 
+`bd`, the queue:
+
+- with Homebrew (macOS or Linux): `brew install beads`;
+- with Node 22 or later: `npm i -g @beads/bd`;
+- otherwise, the release binary for this machine, checked against the
+  release's checksums. This needs `gh`, which step 4 uses anyway:
+
+  ```bash
+  os=$(uname -s | tr A-Z a-z); arch=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')
+  tmp=$(mktemp -d) && cd "$tmp"
+  gh release download -R gastownhall/beads -p "beads_*_${os}_${arch}.tar.gz" -p checksums.txt
+  shasum -a 256 -c --ignore-missing checksums.txt   # must print OK; on Linux sha256sum works too
+  tar xzf beads_*.tar.gz bd && mkdir -p ~/.local/bin && mv bd ~/.local/bin/
+  cd - && rm -rf "$tmp"
+  ```
+
+  If `~/.local/bin` is not on `PATH`, tell the developer which line to add to
+  their shell profile.
+
+`bdui`, the board, needs Node 22 or later: `npm i -g beads-ui`. If that fails
+with a permission error, never use `sudo`; run
+`npm i -g --prefix ~/.local beads-ui` instead. The board is only a view: with
+no Node, skip it, say so in `README.md`, and use `bd` alone.
+
+If `bd` cannot be installed, or the developer does not want the queue, run
+`majles disable beads`, remove `beads.md` from the rules list in `CLAUDE.md`,
+and skip the rest of this step. `majles enable beads` brings it back later.
+
+Then set up the queue:
+
+```bash
 bd init -p <prefix> -q --skip-hooks --skip-agents --setup-exclude
 bd config set dolt.local-only true   # refuses any push to a remote
 bd metrics off                       # usage metrics are on by default
@@ -167,7 +198,23 @@ the queue up to `.beads/backup` by itself (`.claude/rules/beads.md`).
 
 ## 5. Decision log
 
-Render the page into the scratchpad:
+The two pages are published as claude.ai Artifacts when this session can
+publish them: it needs a claude.ai sign-in and a tool for publishing Artifacts.
+Check that before rendering. If it cannot, or publishing fails, do not stop:
+keep the pages as files in the project instead, which `.gitignore` already
+leaves out of git, and write their paths in place of the URLs:
+
+```bash
+python3 tools/render_decisions.py docs/status/decisions.html
+python3 tools/render_status.py docs/status/status.html --decisions-url decisions.html
+```
+
+`DECISION_LOG_URL` is then `docs/status/decisions.html` and `STATUS_PAGE_URL`
+is `docs/status/status.html`. The developer opens them in a browser, and
+regenerating them is how they are published from then on. Tell the developer
+which way was used. Then skip to the tests below.
+
+With Artifacts, render the page into the scratchpad:
 
 ```bash
 python3 tools/render_decisions.py <scratchpad>/<slug>-decisions.html

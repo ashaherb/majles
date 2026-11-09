@@ -143,6 +143,13 @@ class Placeholders(Base):
         self.assertIn("CLAUDE.md:1: {{PROJECT_NAME}}: placeholder left after setup", bp.lint(self.project))
 
 
+class Shown(unittest.TestCase):
+    def test_a_path_under_home_starts_with_a_tilde(self):
+        with tempfile.TemporaryDirectory() as home, mock.patch.object(pathlib.Path, "home", return_value=pathlib.Path(home)):
+            self.assertEqual(bp.shown(pathlib.Path(home) / "projects" / "demo"), "~/projects/demo")
+            self.assertEqual(bp.shown("/somewhere/else"), "/somewhere/else")
+
+
 class SetupGuide(Base):
     def test_sync_never_adds_the_setup_guide_to_an_existing_project(self):
         self.put("majles/manifest.txt", MANIFEST.replace("once   CLAUDE.md", "once   CLAUDE.md\nonce   SETUP.md"),

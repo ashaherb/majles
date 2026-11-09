@@ -323,8 +323,8 @@ def cmd_new(bp, target, root=None):
             lock["once"].append(dest)
     lock["once"].sort()
     save_lock(project, lock)
-    print(f"Created {project} from Majles @{source.label(ref)}.")
-    print(f"Next: cd {project} && claude, then say \"set up this project\".")
+    print(f"Created {shown(project)} from Majles @{source.label(ref)}.")
+    print(f"Next: cd {shown(project)} && claude, then say \"set up this project\".")
     return 0
 
 
@@ -935,6 +935,16 @@ def cmd_placeholders(project):
     if not found:
         print(f"{project.name}: no placeholders left")
     return 1 if found else 0
+
+
+def shown(path):
+    """A path as a person reads it: under the home folder it starts with ~, so a printed
+    path never spells out the user's name (and recordings of the tool stay neutral)."""
+    path = pathlib.Path(path)
+    try:
+        return "~/" + path.resolve().relative_to(pathlib.Path.home().resolve()).as_posix()
+    except ValueError:
+        return str(path)
 
 
 def cmd_lint(project):

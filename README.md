@@ -1,4 +1,4 @@
-<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/logo-dark.svg"><img src=".github/logo.svg" width="112" alt="Majles logo: a board with two sleepy saffron eyes"></picture></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/logo-dark.svg"><img src=".github/logo.svg" width="112" alt="Majles logo: two square brackets of floor cushions, with a saffron dot in the middle"></picture></p>
 
 # Majles
 

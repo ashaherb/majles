@@ -93,3 +93,20 @@ which were renamed in place because none of it had been released. The Arabic nam
 `.majlis.json` and `.boilerplate.json`, `majles migrate` converts them and the old
 SessionStart hook, and the next sync moves the old rule file. The old name appears only
 in that compatibility code, its tests, and the changelog.
+
+## 7. CI proves the install against the built wheel, not PyPI
+
+Problem. Launch needs `pipx install majles` and `uv tool install majles` to work on a
+clean Linux, but nothing is on PyPI until launch day, and a check against PyPI would
+test whatever is published, not the pull request.
+
+Choice. One extra job, `install`, builds the sdist and wheel with `python -m build`,
+installs the wheel with `pipx` and, separately, with `uv tool install`, each into
+its own temp tool directory, then runs `.github/scripts/install_smoke.sh`: `majles --version`
+and `majles new` in a temp folder, asserting the expected files exist. The sdist is
+installed into a venv and checked the same way. It runs on Linux only, Python 3.12,
+under the same ready-pull-request trigger as the tests.
+
+**Consequence:** the check cannot catch a PyPI-side problem (metadata rendering, a
+name clash). After the first release, one manual `pipx install majles` on a clean
+machine covers that.

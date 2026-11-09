@@ -29,7 +29,7 @@ REPO_LEVEL = {"README.md", "CLAUDE.md", "DECISIONS.md", "LICENSE", "CHANGELOG.md
               "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SECURITY.md", "pyproject.toml",
               "setup.py", ".github/FUNDING.yml", ".github/ISSUE_TEMPLATE/config.yml"}
 NOT_SHIPPED = {"MAINTAINING.md"} | REPO_LEVEL  # plus everything under majles/
-NOT_SHIPPED_DIRS = (".github", "build", "dist")  # the last two are git-ignored output
+NOT_SHIPPED_DIRS = (".github", "build", "dist", "majles.egg-info")  # git-ignored build output after .github
 PRODUCT_WORDS = re.compile(r"\b(zad|skills?|catalog|curator|arabic)\b", re.I)
 # Places where a product word is a deliberate example, not a leak.
 ALLOWED_WORDS = {"optional/i18n/.claude/rules/i18n.md",

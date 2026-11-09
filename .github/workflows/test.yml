@@ -41,3 +41,46 @@ jobs:
           "$RUNNER_TEMP/venv/bin/pip" install -q dist/*.whl
           "$RUNNER_TEMP/venv/bin/majles" --version
           cd "$RUNNER_TEMP" && "$RUNNER_TEMP/venv/bin/majles" new demo
+
+  # Launch gate: the install a stranger runs works on a clean Linux. Until the first
+  # PyPI release it is proved against the wheel built from this checkout
+  # (DECISIONS.md, entry 7).
+  install:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: false
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install -q build
+          python -m build --outdir "$RUNNER_TEMP/dist" .
+          ls "$RUNNER_TEMP/dist"
+      - name: pipx install and smoke check
+        env:
+          PIPX_HOME: ${{ runner.temp }}/pipx-home
+          PIPX_BIN_DIR: ${{ runner.temp }}/pipx-bin
+        run: |
+          python -m pip install -q pipx
+          python -m pipx install "$RUNNER_TEMP"/dist/*.whl
+          bash .github/scripts/install_smoke.sh "$PIPX_BIN_DIR/majles"
+      - name: uv tool install and smoke check
+        env:
+          UV_TOOL_DIR: ${{ runner.temp }}/uv-tools
+          UV_TOOL_BIN_DIR: ${{ runner.temp }}/uv-bin
+        run: |
+          uv tool install "$RUNNER_TEMP"/dist/*.whl
+          bash .github/scripts/install_smoke.sh "$UV_TOOL_BIN_DIR/majles"
+      - name: The sdist installs too
+        run: |
+          python -m venv "$RUNNER_TEMP/sdist-venv"
+          "$RUNNER_TEMP/sdist-venv/bin/pip" install -q "$RUNNER_TEMP"/dist/*.tar.gz
+          bash .github/scripts/install_smoke.sh "$RUNNER_TEMP/sdist-venv/bin/majles"

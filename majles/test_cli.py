@@ -118,6 +118,30 @@ class New(Base):
         quiet(bp.cmd_new, self.bp, str(other))
         self.assertEqual((other / "rules/a.md").read_text(), "rule a v1\n")
 
+    def test_refuses_a_name_that_is_not_a_plain_lowercase_slug(self):
+        root = pathlib.Path(self.tmp.name) / "root"
+        root.mkdir()
+        for bad in ("Bad Slug", "bad slug", "MyIdea", "my_idea", "-idea", "idea-", "my--idea", ".", "..", "x/Bad"):
+            with self.subTest(bad=bad):
+                with self.assertRaises(bp.MajlesError) as caught:
+                    bp.cmd_new(self.bp, bad, root)
+                self.assertIn("lowercase letters and digits", str(caught.exception))
+        self.assertEqual(list(root.iterdir()), [], "nothing is written for a refused name")
+        for good in ("my-idea", "idea2", "2048-clone"):
+            with self.subTest(good=good):
+                self.assertEqual(quiet(bp.cmd_new, self.bp, good, root)[0], 0)
+
+    def test_next_line_quotes_the_path_so_it_pastes_safely(self):
+        with tempfile.TemporaryDirectory() as home, mock.patch.object(pathlib.Path, "home", return_value=pathlib.Path(home)):
+            home = pathlib.Path(home).resolve()
+            spaced = home / "My Projects"
+            spaced.mkdir()
+            out = quiet(bp.cmd_new, self.bp, "my-idea", spaced)[1]
+            self.assertIn("Next: cd ~/'My Projects/my-idea' && claude", out)
+            out = quiet(bp.cmd_new, self.bp, "plain", home)[1]
+            self.assertIn("Next: cd ~/plain && claude", out)
+        self.assertEqual(bp.shell_path("/some where/x"), "'/some where/x'")
+
 
 class Placeholders(Base):
     """`majles placeholders` reads only the files the project owns."""

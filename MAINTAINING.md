@@ -21,7 +21,9 @@ claude
 
 The projects root is `--root` if given, else `$MAJLES_ROOT`, else the current
 directory. `new`, `sync --all` and `research-find` use it. A path given to `new`
-that contains a slash, or is absolute, is used as is.
+that contains a slash, or is absolute, is used as is. The project's name, the
+slug or the path's last part, must be lowercase letters and digits with single
+hyphens between words; `new` refuses anything else before it writes a file.
 
 Then say **"set up this project"** and describe it, in as much or as little
 detail as you have. Claude fills in what it can from what you said, asks one
@@ -192,6 +194,19 @@ To release, bump `__version__` in `majles/__init__.py`, add a `CHANGELOG.md`
 entry that says what changes in a project, and build with
 `python3 -m pip wheel . --no-deps -w dist`. The wheel holds only the files
 the manifest lists, so a file missing from the manifest never ships.
+
+`__version__` is the only place the version is written: `pyproject.toml` reads
+it, and so do `majles --version` and the lock of a project made from the
+package. A tag is `v` plus that string, so the tag `v0.1.0rc1` goes on the
+commit where `majles --version` prints `majles 0.1.0rc1`. Check that before
+tagging.
+
+On launch day, the version moves from the release candidate to `0.1.0` in one
+pull request: set `__version__ = "0.1.0"`, change the `CHANGELOG.md` heading
+from "not out yet" to the date, and merge. Then, on `main`, check that
+`majles --version` prints `majles 0.1.0`, tag that commit `v0.1.0`, build the
+wheel, and upload it to PyPI. Once its `majles` is upgraded, a project made from
+`0.1.0rc1` sees the update notice at its next session, like any release.
 
 Keep every shared file product-neutral and free of placeholders. A fact about a
 specific product belongs in a file the project owns. A behaviour only some

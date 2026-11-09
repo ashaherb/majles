@@ -23,6 +23,20 @@ You need Python 3.10 or later, Git, [Claude Code](https://docs.claude.com/en/doc
 and the GitHub CLI (`gh`), signed in. Setup uses `gh` to create a private
 GitHub repo for the project.
 
+Setup also offers a work queue with a local board. It installs what is
+missing, so nothing needs to be there first, but it helps to know what it
+uses:
+
+- **The queue, Beads (`bd`):** installed with Homebrew (`brew install beads`),
+  else with npm on Node 22 or later (`npm i -g @beads/bd`), else as the release
+  binary for your machine, downloaded with `gh` and checked against the
+  release's checksums.
+- **The board, beads-ui:** needs Node 22 or later (`npm i -g beads-ui`). With
+  no Node, setup skips the board and the queue works without it.
+
+If `bd` cannot be installed, or you do not want the queue, setup turns the
+`beads` module off and carries on. `majles enable beads` brings it back later.
+
 ### 1. Install
 
 ```bash
@@ -45,6 +59,9 @@ This creates `my-idea` in the current directory and prints the next step:
 Created ~/code/my-idea from Majles @0.1.0.
 Next: cd ~/code/my-idea && claude, then say "set up this project".
 ```
+
+A project's name is lowercase letters and digits, with single hyphens between
+words; `majles new` refuses anything else before it writes a file.
 
 The folder holds the agents, the rules, the `docs/` folders and a setup guide,
 `SETUP.md`. `.majles.json` records what was copied. It is not a git repo yet;
@@ -83,7 +100,7 @@ Claude follows `SETUP.md`, in order:
 4. It runs `git init`, creates a private GitHub repo with `gh`, and turns on a
    git hook that refuses pushes to `main`.
 5. It sets up the work queue, unless you say no: Beads (`bd`) and its local
-   board, installed with Homebrew and npm.
+   board, installing what is missing (see the prerequisites above).
 6. It renders the decision log and a status page as HTML, and publishes each
    as an Artifact.
 7. It deletes `SETUP.md`, makes the first commit, and pushes it. That is the

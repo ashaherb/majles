@@ -22,7 +22,8 @@ Zero dependencies. Python 3.10+. Run it from anywhere (or as `python3 -m majles`
 [project] defaults to the current directory. <root>, the directory that holds
 your projects, is --root if given, else $MAJLES_ROOT, else the current
 directory. A path given to `new` that contains a slash, or is absolute, is used
-as is.
+as is. The project's name, the slug or the path's last part, must be lowercase
+letters and digits with single hyphens between words, such as my-idea.
 
 majles/manifest.txt sorts every file into "shared" (Majles owns it; sync
 keeps projects identical to it) or "once" (a template copied at
@@ -54,6 +55,7 @@ import json
 import os
 import pathlib
 import re
+import shlex
 import subprocess
 import sys
 
@@ -87,6 +89,8 @@ COMPARED = {
     "README.md": lambda line: line.startswith("## ") and "{{" not in line,  # the sections
 }
 ROOT_ENV = "MAJLES_ROOT"
+# A project's folder name: it becomes the repo name and a path people paste into a shell.
+SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 LEGACY_ROOT_ENV = "MAJLIS_ROOT"  # still read when the new one is not set
 
 
@@ -309,8 +313,26 @@ def resolve_project(arg):
 # ---------------------------------------------------------------- commands
 
 
+def check_slug(name):
+    """Refuse a project name that is not a plain lowercase slug, before anything is written."""
+    if not SLUG.fullmatch(name):
+        raise MajlesError(
+            f"{name!r} is not a valid project name: use lowercase letters and digits, "
+            "with single hyphens between words, for example my-idea")
+
+
+def shell_path(path):
+    """A path that pastes safely into a shell, keeping a leading ~/ outside the quotes so it
+    still expands."""
+    text = shown(path)
+    if text.startswith("~/"):
+        return "~/" + shlex.quote(text[2:])
+    return shlex.quote(text)
+
+
 def cmd_new(bp, target, root=None):
     project = pathlib.Path(target).expanduser()
+    check_slug(project.name)  # a path's last part is the project's name, so it is checked too
     if "/" not in target and not project.is_absolute():
         project = (root or projects_root()) / target
     project = project.resolve()
@@ -332,7 +354,7 @@ def cmd_new(bp, target, root=None):
     lock["once"].sort()
     save_lock(project, lock)
     print(f"Created {shown(project)} from Majles @{source.label(ref)}.")
-    print(f"Next: cd {shown(project)} && claude, then say \"set up this project\".")
+    print(f"Next: cd {shell_path(project)} && claude, then say \"set up this project\".")
     return 0
 
 

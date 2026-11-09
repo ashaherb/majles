@@ -64,6 +64,9 @@ reserves the name.)
 - **Setup installs Beads without Homebrew**, from npm or the checked release
   binary, and turns the module off when it cannot. This changes only
   `SETUP.md`, which new projects get.
+- **`majles new` refuses a name that is not a plain lowercase slug**, such as
+  one with spaces or capitals, before it writes anything, and quotes the path
+  in the "Next:" line it prints. No change to existing projects.
 
 ### How sync knows what you received
 

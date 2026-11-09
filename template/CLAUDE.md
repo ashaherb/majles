@@ -6,15 +6,14 @@ at its root), you are maintaining the template. Fill nothing in, and follow
 `MAINTAINING.md`.**
 
 Otherwise, this project was just created from the Majlis template and is not set
-up yet. Before any other work, follow "What setup does" in
-`MAINTAINING.md` in the Majlis repository. In short:
+up yet. Before any other work, follow `SETUP.md` in this project. In short:
 
 1. Get the project description from the developer.
 2. Fill every `{{PLACEHOLDER}}` you can derive. Ask for the rest in one batch.
 3. Turn modules on or off with `majlis`.
 4. Create the repo.
 5. Publish the decision log.
-6. Delete this section, and the template line in `README.md`.
+6. Delete this section, the template line in `README.md`, and `SETUP.md`.
 <!-- /SETUP -->
 
 # {{PROJECT_NAME}}

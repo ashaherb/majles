@@ -15,12 +15,13 @@ you can publish as a page. It ships no stack and no product code. Those are the
 first decisions your project makes, with the team.
 
 > **Status: pre-release.** Majlis is not on PyPI yet. Until it is, clone this
-> repo and run `pipx install ./majlis`, or run it without installing (below).
+> repo and run `pipx install ./majlis` (or `uv tool install ./majlis`), or run it
+> without installing (below).
 
 ## Quick start
 
 ```bash
-pipx install majlis
+pipx install majlis        # or: uv tool install majlis
 majlis new my-idea
 cd my-idea && claude
 ```

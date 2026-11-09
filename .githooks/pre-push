@@ -17,8 +17,38 @@ if [ "${ALLOW_MAIN_PUSH:-}" != 1 ]; then
   done || exit 1
 fi
 # Warns, never refuses, when a branch adds more than PR_ADDED_LIMIT lines over
-# main, deletions and lockfiles not counted (.claude/rules/git.md).
+# main, deletions and lockfiles not counted (.claude/rules/git.md). Files Majlis
+# installed and nobody has changed (their hash still matches .majlis.json) are not
+# counted either, so a first adoption or a sync does not trip it.
 limit="${PR_ADDED_LIMIT:-1000}"
+# Reads `git diff --numstat` on stdin; prints the lines added outside unchanged template files.
+count_added() {
+  if ! command -v python3 >/dev/null 2>&1; then
+    awk '$1 != "-" { n += $1 } END { print n + 0 }'
+    return
+  fi
+  python3 -c '
+import hashlib, json, subprocess, sys
+rev = sys.argv[1]
+def show(path):
+    r = subprocess.run(["git", "show", f"{rev}:{path}"], capture_output=True)
+    return r.stdout if r.returncode == 0 else None
+lock = show(".majlis.json")
+files = json.loads(lock).get("files", {}) if lock else {}
+n = 0
+for line in sys.stdin:
+    parts = line.rstrip("\n").split("\t")
+    if len(parts) != 3 or parts[0] == "-":
+        continue
+    added, path = int(parts[0]), parts[2]
+    if path in files:
+        data = show(path)
+        if data is not None and hashlib.sha256(data).hexdigest() == files[path]:
+            continue
+    n += added
+print(n)
+' "$1"
+}
 if git rev-parse -q --verify origin/main >/dev/null; then
   printf '%s\n' "$refs" | while read -r _lref lsha rref _rsha; do
     case "$lsha" in ''|*[!0]*) ;; *) continue ;; esac
@@ -27,9 +57,9 @@ if git rev-parse -q --verify origin/main >/dev/null; then
     # Lockfiles by name: a `*lock*` pattern would also drop paths like blocks/ or clock.ts.
     added=$(git diff --numstat "$base" "$lsha" -- . ':(exclude,glob)**/pnpm-lock.yaml' \
       ':(exclude,glob)**/package-lock.json' ':(exclude,glob)**/*.lock' ':(exclude,glob)**/*.lockb' |
-      awk '$1 != "-" { n += $1 } END { print n + 0 }')
+      count_added "$lsha")
     if [ "$added" -gt "$limit" ]; then
-      echo "pre-push: warning: ${rref#refs/heads/} adds $added lines over main (limit $limit, deletions and lockfiles not counted). Split it into pull requests a person can review (.claude/rules/git.md)." >&2
+      echo "pre-push: warning: ${rref#refs/heads/} adds $added lines over main (limit $limit, deletions, lockfiles and unchanged template files not counted). Split it into pull requests a person can review (.claude/rules/git.md)." >&2
     fi
   done
 fi

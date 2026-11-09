@@ -5,6 +5,7 @@ manifest, shared files carry no project facts, and every placeholder is
 documented for setup.
 """
 
+import hashlib
 import json
 import os
 import pathlib
@@ -19,7 +20,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from majlis import cli as bp  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-GUIDE = ROOT / "MAINTAINING.md"
+GUIDE = ROOT / "template" / "SETUP.md"  # the setup procedure, shipped once
 PLACEHOLDER = re.compile(r"\{\{([A-Z_]+)\}\}")
 EXAMPLES = {"LIKE_THIS", "PLACEHOLDER"}  # illustrations in the setup text
 # The repo's own files, for Majlis as a public project. None reaches a project.
@@ -31,7 +32,8 @@ NOT_SHIPPED = {"MAINTAINING.md"} | REPO_LEVEL  # plus everything under majlis/
 NOT_SHIPPED_DIRS = (".github", "build", "dist")  # the last two are git-ignored output
 PRODUCT_WORDS = re.compile(r"\b(zad|skills?|catalog|curator|arabic)\b", re.I)
 # Places where a product word is a deliberate example, not a leak.
-ALLOWED_WORDS = {"optional/i18n/.claude/rules/i18n.md"}
+ALLOWED_WORDS = {"optional/i18n/.claude/rules/i18n.md",
+                 "template/SETUP.md"}  # the interview names example domains
 
 ENTRIES = bp.parse_manifest((ROOT / bp.MANIFEST).read_text(encoding="utf-8"))
 
@@ -120,7 +122,7 @@ class Placeholders(unittest.TestCase):
         self.assertFalse(bad, f"shared files must be placeholder-free: {bad}")
 
     def test_every_placeholder_is_documented_in_the_guide(self):
-        guide = text("MAINTAINING.md")
+        guide = text("template/SETUP.md")
         missing = sorted({f"{name} ({src})" for _, _, src, _ in ENTRIES
                           for name in PLACEHOLDER.findall(text(src))
                           if name not in EXAMPLES and name not in guide})
@@ -275,6 +277,18 @@ class MainGuard(unittest.TestCase):
         self.assertNotIn("warning", self.branch_push("lock", "web/pnpm-lock.yaml", 1200)[1])
         self.git(self.repo, "checkout", "-q", "main")
         self.assertNotIn("warning", self.branch_push("small", "src/small.ts", 50)[1])
+
+
+    def test_unchanged_template_files_do_not_count(self):
+        # A first adoption: 1,200 lines of template files, recorded in .majlis.json as installed.
+        body = "".join(f"{i}\n" for i in range(1200))
+        lock = {"files": {".claude/rules/big.md": hashlib.sha256(body.encode()).hexdigest()}}
+        (self.repo / ".majlis.json").write_text(json.dumps(lock))
+        self.assertNotIn("warning", self.branch_push("adopt", ".claude/rules/big.md", 1200)[1])
+
+    def test_an_edited_template_file_counts(self):
+        (self.repo / ".majlis.json").write_text(json.dumps({"files": {".claude/rules/big.md": "0" * 64}}))
+        self.assertIn("warning", self.branch_push("edited", ".claude/rules/big.md", 1200)[1])
 
 
 class Settings(unittest.TestCase):

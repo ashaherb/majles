@@ -45,6 +45,7 @@ shared tools/render_status.py
 shared tools/test_render_status.py
 once   template/CLAUDE.md -> CLAUDE.md
 once   template/README.md -> README.md
+once   template/SETUP.md -> SETUP.md
 once   .gitignore
 once   .claude/settings.json
 once   .claude/rules/constraints.md

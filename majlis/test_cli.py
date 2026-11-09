@@ -119,6 +119,30 @@ class New(Base):
         self.assertEqual((other / "rules/a.md").read_text(), "rule a v1\n")
 
 
+class Placeholders(Base):
+    """`majlis placeholders` reads only the files the project owns."""
+
+    def test_lists_the_owned_files_only(self):
+        (self.project / "footage.cast").write_text('[0, "o", "{{PROJECT_NAME}}"]\n')
+        code, out = quiet(bp.cmd_placeholders, self.project)
+        self.assertEqual(code, 1)
+        self.assertIn("CLAUDE.md:1: {{PROJECT_NAME}}", out)
+        self.assertNotIn("footage.cast", out)
+
+    def test_clean_once_filled(self):
+        (self.project / "CLAUDE.md").write_text("# Demo\n")
+        self.assertEqual(quiet(bp.cmd_placeholders, self.project)[0], 0)
+
+    def test_lint_flags_a_leftover_only_after_setup(self):
+        lock = self.lock()
+        lock["once"] = sorted(set(lock["once"]) | {bp.SETUP_GUIDE})
+        (self.project / bp.LOCK).write_text(json.dumps(lock))
+        (self.project / bp.SETUP_GUIDE).write_text("Placeholders look like `{{LIKE_THIS}}`.\n")
+        self.assertFalse([f for f in bp.lint(self.project) if "placeholder" in f], "setup is not done yet")
+        (self.project / bp.SETUP_GUIDE).unlink()
+        self.assertIn("CLAUDE.md:1: {{PROJECT_NAME}}: placeholder left after setup", bp.lint(self.project))
+
+
 class Retired(Base):
     """A module Majlis stops shipping: its files stay in the project, as the project's own."""
 

@@ -3,7 +3,21 @@
 Each entry says what changes in your project when you sync to that version.
 Run `majlis sync` to preview it, and `majlis sync --apply` to write it.
 
-## 0.1.0
+## Unreleased
+
+### What changes in your project
+
+- **The setup guide comes with your project.** A new project gets `SETUP.md`, the
+  step-by-step setup procedure, and `CLAUDE.md` points at it, so setup works from the
+  installed package without the Majlis repository. Setup deletes it when it is done.
+  Existing projects are not changed.
+- **`majlis placeholders` lists what setup still has to fill**, reading only the files
+  your project owns (the "once" list in `.majlis.json`), never footage or generated
+  files. Once setup has deleted `SETUP.md`, `majlis lint` reports any placeholder left.
+- **The push guard no longer counts files Majlis installed unchanged.** A first
+  adoption or a sync no longer trips the 1,000-line warning. Sync updates
+  `.githooks/pre-push`.
+
 
 The first release under the name Majlis.
 

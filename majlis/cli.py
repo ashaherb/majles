@@ -15,6 +15,7 @@ Zero dependencies. Python 3.10+. Run it from anywhere (or as `python3 -m majlis`
                                            the SessionStart hook
     majlis detach <path> [project]          the project takes over a shared file
     majlis lint [project]                   check research, ADRs, standing-text size and the main guard
+    majlis placeholders [project]           placeholders left in the files the project owns
     majlis research-find <words...>         find earlier research in every project
     majlis migrate [project]               move a project made before the rename onto Majlis
 
@@ -849,6 +850,9 @@ def lint(project):
                    "The status may be stale.")
     out += lint_standing(project)
     out += lint_main_guard(project)
+    # Before setup, placeholders are expected; after it (no setup block in CLAUDE.md), one left is a slip.
+    if setup_done(project):
+        out += [f"{f}: placeholder left after setup" for f in placeholders(project)]
     return out
 
 
@@ -876,6 +880,45 @@ def lint_main_guard(project):
         return []  # relative, or this clone's own .githooks by absolute path
     return [".githooks/pre-push is off in this clone, so nothing stops a push to main. "
             "Run: git config core.hooksPath .githooks (.claude/rules/git.md)"]
+
+
+SETUP_GUIDE = "SETUP.md"  # the setup procedure, shipped once; its examples are not placeholders
+PLACEHOLDER = re.compile(r"\{\{([A-Z_]+)\}\}")
+
+
+def placeholders(project):
+    """`path:line: {{NAME}}` for every placeholder left in a file the project owns.
+
+    Only the files Majlis installed as the project's own (the lock's "once" list) are
+    read, never footage, generated files or anything else in the repo."""
+    lock = load_lock(project) if has_lock(project) else {"once": ["CLAUDE.md", "README.md"]}
+    out = []
+    for rel in sorted(set(lock.get("once", [])) - {SETUP_GUIDE}):
+        f = project / rel
+        if not f.is_file():
+            continue
+        for n, line in enumerate(f.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+            out += [f"{rel}:{n}: {{{{{name}}}}}" for name in PLACEHOLDER.findall(line)]
+    return out
+
+
+def setup_done(project):
+    """Setup is done once the SETUP.md it installed is gone. Projects made before SETUP.md
+    shipped never received it, so they are not checked."""
+    if not has_lock(project):
+        return False
+    return SETUP_GUIDE in load_lock(project).get("once", []) and not (project / SETUP_GUIDE).exists()
+
+
+def cmd_placeholders(project):
+    if not project.is_dir():
+        raise MajlisError(f"{project} is not a directory")
+    found = placeholders(project)
+    for f in found:
+        print(f)
+    if not found:
+        print(f"{project.name}: no placeholders left")
+    return 1 if found else 0
 
 
 def cmd_lint(project):
@@ -946,6 +989,7 @@ def main(argv=None):
     p = sub.add_parser("check"); p.add_argument("project", nargs="?")
     p = sub.add_parser("detach"); p.add_argument("path"); p.add_argument("project", nargs="?")
     p = sub.add_parser("lint"); p.add_argument("project", nargs="?")
+    p = sub.add_parser("placeholders"); p.add_argument("project", nargs="?")
     p = sub.add_parser("research-find"); p.add_argument("words", nargs="+")
     p = sub.add_parser("migrate"); p.add_argument("project", nargs="?")
     for p in sub.choices.values():  # --root is accepted after the command too
@@ -953,7 +997,7 @@ def main(argv=None):
     a = ap.parse_args(argv)
     root = projects_root(a.root)
     try:
-        BP = default_source() if a.cmd not in ("detach", "lint", "research-find", "migrate") else None
+        BP = default_source() if a.cmd not in ("detach", "lint", "placeholders", "research-find", "migrate") else None
         if a.cmd == "new":
             return cmd_new(BP, a.slug, root)
         if a.cmd == "adopt":
@@ -973,6 +1017,8 @@ def main(argv=None):
             return cmd_detach(resolve_project(a.project), a.path)
         if a.cmd == "lint":
             return cmd_lint(resolve_project(a.project))
+        if a.cmd == "placeholders":
+            return cmd_placeholders(resolve_project(a.project))
         if a.cmd == "research-find":
             return cmd_research_find(a.words, root)
         if a.cmd == "migrate":

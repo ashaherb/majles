@@ -24,6 +24,7 @@ reserves the name.)
 - **The setup guide comes with your project.** A new project gets `SETUP.md`, the
   step-by-step setup procedure, and `CLAUDE.md` points at it, so setup works from the
   installed package without the Majles repository. Setup deletes it when it is done.
+  `majles new` and `majles adopt` bring it; `sync` never adds it to an existing project.
 - **`majles placeholders` lists what setup still has to fill**, reading only the files
   your project owns (the "once" list in `.majles.json`), never footage or generated
   files. Once setup has deleted `SETUP.md`, `majles lint` reports any placeholder left.

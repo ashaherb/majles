@@ -143,6 +143,17 @@ class Placeholders(Base):
         self.assertIn("CLAUDE.md:1: {{PROJECT_NAME}}: placeholder left after setup", bp.lint(self.project))
 
 
+class SetupGuide(Base):
+    def test_sync_never_adds_the_setup_guide_to_an_existing_project(self):
+        self.put("majles/manifest.txt", MANIFEST.replace("once   CLAUDE.md", "once   CLAUDE.md\nonce   SETUP.md"),
+                 commit=False)
+        self.put("SETUP.md", "the procedure\n")
+        code, out = self.sync(apply=False)
+        self.assertNotIn("SETUP.md", out)
+        self.sync()
+        self.assertFalse((self.project / "SETUP.md").exists())
+
+
 class Retired(Base):
     """A module Majles stops shipping: its files stay in the project, as the project's own."""
 

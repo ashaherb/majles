@@ -470,6 +470,10 @@ def plan_sync(bp, project, lock, commit, take=()):
             continue
         p = project / dest
         if kind == "once":
+            # The setup guide is for a project being set up, so `new` and `adopt` bring it;
+            # sync never adds it to a project that already exists.
+            if dest == SETUP_GUIDE:
+                continue
             if dest not in lock.get("once", []) and not p.exists():
                 actions.append(("add-template", dest, source.read(commit, src)))
             continue

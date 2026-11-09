@@ -8,7 +8,7 @@ exactly one of four places.
 | Architecture: hard to reverse, shapes the system | `docs/adr/NNNN-*.md` | architect | a new ADR that supersedes it |
 | What the user gets: the experience, a flow's behaviour | `docs/specs/*.md` | product | editing the spec in place |
 | A choice made from research | `docs/research/<task>/decision.md` | the agent that asked | a new research task |
-| How the team works | `.claude/rules/*.md` | the main session, at the developer's direction | editing the rule in place (shared rules: in the Majlis repository, see `majlis.md`) |
+| How the team works | `.claude/rules/*.md` | the main session, at the developer's direction | editing the rule in place (shared rules: in the Majles repository, see `majles.md`) |
 
 The developer's own words go in `docs/direction.md`, verbatim
 (`.claude/rules/asking.md`). Records cite them; they never paraphrase them as
@@ -24,7 +24,7 @@ stack, the data store, the content model, hosting, auth, the i18n/RTL
 architecture, a dependency the architecture rests on. Process, tooling, file
 layout, naming, agent config and documentation structure are rules, not ADRs.
 What the user sees, hears or can do is a spec, not an ADR. Expect a handful
-per slice; `majlis lint` flags more than five. When unsure, it is not an ADR.
+per slice; `majles lint` flags more than five. When unsure, it is not an ADR.
 
 An ADR that limits what the user gets (what the product may say, show or do
 for them) states what the user loses, and needs the developer's yes before it

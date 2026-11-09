@@ -1,6 +1,6 @@
-"""Tests for the majlis CLI.   python3 -m unittest discover -s majlis -p 'test_*.py'
+"""Tests for the majles CLI.   python3 -m unittest discover -s majles -p 'test_*.py'
 
-Each test builds a throwaway Majlis git repo and a project created from it.
+Each test builds a throwaway Majles git repo and a project created from it.
 """
 
 import contextlib
@@ -16,7 +16,7 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
-from majlis import cli as bp  # noqa: E402
+from majles import cli as bp  # noqa: E402
 
 MANIFEST = """
 [core]
@@ -36,7 +36,7 @@ shared optional/beads/beads.md -> rules/beads.md
 """
 
 FILES = {
-    "majlis/manifest.txt": MANIFEST,
+    "majles/manifest.txt": MANIFEST,
     "rules/a.md": "rule a v1\n",
     "rules/b.md": "rule b v1\n",
     "CLAUDE.md": "# {{PROJECT_NAME}}\n",
@@ -62,7 +62,7 @@ class Base(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         root = pathlib.Path(self.tmp.name)
-        self.bp = root / "majlis-repo"
+        self.bp = root / "majles-repo"
         self.bp.mkdir()
         run("git", "init", "-q", "-b", "main", cwd=self.bp)
         for path, text in FILES.items():
@@ -109,7 +109,7 @@ class New(Base):
         self.assertEqual(lock["commit"], bp.head(self.bp))
 
     def test_refuses_a_non_empty_directory(self):
-        with self.assertRaises(bp.MajlisError):
+        with self.assertRaises(bp.MajlesError):
             bp.cmd_new(self.bp, str(self.project))
 
     def test_uses_committed_content_not_the_working_tree(self):
@@ -120,7 +120,7 @@ class New(Base):
 
 
 class Placeholders(Base):
-    """`majlis placeholders` reads only the files the project owns."""
+    """`majles placeholders` reads only the files the project owns."""
 
     def test_lists_the_owned_files_only(self):
         (self.project / "footage.cast").write_text('[0, "o", "{{PROJECT_NAME}}"]\n')
@@ -144,16 +144,16 @@ class Placeholders(Base):
 
 
 class Retired(Base):
-    """A module Majlis stops shipping: its files stay in the project, as the project's own."""
+    """A module Majles stops shipping: its files stay in the project, as the project's own."""
 
     def setUp(self):
         super().setUp()
-        self.put("majlis/manifest.txt", MANIFEST + "\n[old]\nshared optional/old/old.md -> rules/old.md\n",
+        self.put("majles/manifest.txt", MANIFEST + "\n[old]\nshared optional/old/old.md -> rules/old.md\n",
                  commit=False)
         self.put("optional/old/old.md", "old v1\n")
         quiet(bp.cmd_sync, self.bp, self.project, True, False, [])
         quiet(bp.cmd_enable, self.bp, "old", self.project)
-        self.put("majlis/manifest.txt", MANIFEST, commit=False)
+        self.put("majles/manifest.txt", MANIFEST, commit=False)
         (self.bp / "optional/old/old.md").unlink()
         self.commit("retire old")
 
@@ -171,8 +171,59 @@ class Retired(Base):
             self.assertIn("up to date", self.sync()[1])
 
 
+class FromMajlis(Base):
+    """Projects made under the name Majlis: .majlis.json, the `majlis` hook, majlis.md."""
+
+    OLD_HOOK = ('command -v maj' 'lis >/dev/null 2>&1 && maj' 'lis check "$CLAUDE_PROJECT_DIR" '
+                '2>/dev/null; exit 0')
+    OLD_LOCK = ".maj" "lis.json"
+    OLD_RULE = ".claude/rules/maj" "lis.md"
+
+    def make_majlis(self):
+        (self.project / bp.LOCK).rename(self.project / self.OLD_LOCK)
+        settings = {"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": self.OLD_HOOK}]}]}}
+        (self.project / ".claude").mkdir()
+        (self.project / ".claude/settings.json").write_text(json.dumps(settings, indent=2) + "\n")
+
+    def test_the_old_lock_is_read_and_migrate_converts_it(self):
+        self.make_majlis()
+        self.assertIn(self.OLD_LOCK, bp.LEGACY_LOCKS)
+        self.assertEqual(bp.lock_path(self.project).name, self.OLD_LOCK)
+        self.assertIn("migrate", bp.migrate_notice(self.project))
+        code, out = quiet(bp.cmd_migrate, self.project)
+        self.assertEqual(code, 0, out)
+        self.assertFalse((self.project / self.OLD_LOCK).exists())
+        self.assertTrue((self.project / bp.LOCK).exists())
+        hook = json.loads(self.read(".claude/settings.json"))["hooks"]["SessionStart"][0]["hooks"][0]
+        self.assertEqual(hook["command"], bp.HOOK_COMMAND)
+        self.assertIsNone(bp.migrate_notice(self.project))
+
+    def test_sync_moves_the_old_rule(self):
+        old, new = self.OLD_RULE, ".claude/rules/majles.md"
+        self.put(old, "rule v1\n", commit=False)
+        self.put("majles/manifest.txt", MANIFEST.replace("once   CLAUDE.md", f"shared {old}\nonce   CLAUDE.md"))
+        self.sync()
+        run("git", "mv", old, new, cwd=self.bp)
+        self.put("majles/manifest.txt", MANIFEST.replace("once   CLAUDE.md", f"shared {new}\nonce   CLAUDE.md"))
+        code, out = self.sync()
+        self.assertEqual(code, 0, out)
+        self.assertFalse((self.project / old).exists())
+        self.assertEqual(self.read(new), "rule v1\n")
+
+    def test_the_manifest_is_found_at_a_commit_from_the_majlis_layout(self):
+        old = bp.head(self.bp)
+        run("git", "mv", "majles", "maj" "lis", cwd=self.bp)
+        self.commit("majlis layout")
+        self.assertEqual(bp.manifest_at(self.bp, bp.head(self.bp)), bp.manifest_at(self.bp, old))
+
+    def test_the_old_root_variable_still_works(self):
+        with mock.patch.dict(os.environ, {"MAJLES_ROOT": "", "MAJ" "LIS_ROOT": str(self.project.parent)}):
+            os.environ.pop("MAJLES_ROOT")
+            self.assertEqual(bp.projects_root(), self.project.parent.resolve())
+
+
 class Legacy(Base):
-    """Projects made before the rename from "boilerplate" to Majlis."""
+    """Projects made before the rename from "boilerplate" to Majles."""
 
     # The old script's name is on the blocklist in test_template.py, so it is built from parts.
     OLD_HOOK = ('f="$HOME/x/project-boilerplate/boilerplate/' 'bp' '.py"; [ -f "$f" ] && '
@@ -181,8 +232,8 @@ class Legacy(Base):
     def make_legacy(self):
         lock = self.lock()
         lock["boilerplate"] = lock.pop("source")
-        (self.project / bp.LOCK).rename(self.project / bp.LEGACY_LOCK)
-        (self.project / bp.LEGACY_LOCK).write_text(json.dumps(lock, indent=2))
+        (self.project / bp.LOCK).rename(self.project / bp.LEGACY_LOCKS[-1])
+        (self.project / bp.LEGACY_LOCKS[-1]).write_text(json.dumps(lock, indent=2))
         settings = {"fallbackModel": ["opus"], "hooks": {"SessionStart": [
             {"hooks": [{"type": "command", "command": self.OLD_HOOK, "timeout": 10}]}]}}
         (self.project / ".claude").mkdir()
@@ -195,13 +246,13 @@ class Legacy(Base):
         self.assertEqual(code, 0)
         self.assertEqual(self.read("rules/a.md"), "rule a v2\n")
         self.assertFalse((self.project / bp.LOCK).exists())  # sync does not migrate
-        self.assertEqual(json.loads((self.project / bp.LEGACY_LOCK).read_text())["commit"], bp.head(self.bp))
+        self.assertEqual(json.loads((self.project / bp.LEGACY_LOCKS[-1]).read_text())["commit"], bp.head(self.bp))
         msg = json.loads(quiet(bp.cmd_check, self.bp, self.project)[1])["systemMessage"]
-        self.assertIn("majlis migrate", msg)
+        self.assertIn("majles migrate", msg)
 
     def test_the_manifest_is_found_at_a_commit_from_before_the_rename(self):
         old = bp.head(self.bp)
-        run("git", "mv", "majlis", "boilerplate", cwd=self.bp)
+        run("git", "mv", "majles", "boilerplate", cwd=self.bp)
         self.commit("old layout")
         self.assertEqual(bp.manifest_at(self.bp, bp.head(self.bp)), bp.manifest_at(self.bp, old))
 
@@ -209,7 +260,7 @@ class Legacy(Base):
         self.make_legacy()
         code, out = quiet(bp.cmd_migrate, self.project)
         self.assertEqual(code, 0, out)
-        self.assertFalse((self.project / bp.LEGACY_LOCK).exists())
+        self.assertFalse((self.project / bp.LEGACY_LOCKS[-1]).exists())
         lock = self.lock()
         self.assertIn("source", lock)
         self.assertNotIn("boilerplate", lock)
@@ -218,7 +269,7 @@ class Legacy(Base):
         self.assertEqual(hook["command"], bp.HOOK_COMMAND)
         self.assertEqual(hook["timeout"], 10)
         self.assertEqual(settings["fallbackModel"], ["opus"])
-        self.assertIn("already on Majlis", quiet(bp.cmd_migrate, self.project)[1])  # idempotent
+        self.assertIn("already on Majles", quiet(bp.cmd_migrate, self.project)[1])  # idempotent
 
     def test_migrate_leaves_a_custom_hook_alone(self):
         self.make_legacy()
@@ -229,20 +280,20 @@ class Legacy(Base):
         self.assertTrue((self.project / bp.LOCK).exists())
 
     def test_migrate_refuses_when_both_lock_files_exist(self):
-        (self.project / bp.LEGACY_LOCK).write_text("{}")
-        with self.assertRaises(bp.MajlisError):
+        (self.project / bp.LEGACY_LOCKS[-1]).write_text("{}")
+        with self.assertRaises(bp.MajlesError):
             bp.cmd_migrate(self.project)
 
     def renamed_rule(self):
-        """A project with the old shared rule, then a Majlis commit that renames it."""
-        old, new = ".claude/rules/boilerplate.md", ".claude/rules/majlis.md"
+        """A project with the old shared rule, then a Majles commit that renames it."""
+        old, new = ".claude/rules/boilerplate.md", ".claude/rules/majles.md"
         self.put(old, "rule v1\n", commit=False)
-        self.put("majlis/manifest.txt", MANIFEST.replace("once   CLAUDE.md", f"shared {old}\nonce   CLAUDE.md"))
+        self.put("majles/manifest.txt", MANIFEST.replace("once   CLAUDE.md", f"shared {old}\nonce   CLAUDE.md"))
         self.sync()
         self.assertEqual(self.read(old), "rule v1\n")
         run("git", "mv", old, new, cwd=self.bp)
         self.put(new, "rule v2\n", commit=False)
-        self.put("majlis/manifest.txt", MANIFEST.replace("once   CLAUDE.md", f"shared {new}\nonce   CLAUDE.md"))
+        self.put("majles/manifest.txt", MANIFEST.replace("once   CLAUDE.md", f"shared {new}\nonce   CLAUDE.md"))
         return old, new
 
     def test_sync_moves_an_unchanged_renamed_rule(self):
@@ -274,7 +325,7 @@ class Legacy(Base):
 class Root(Base):
     def test_root_is_the_option_then_the_env_then_the_cwd(self):
         tmp = pathlib.Path(self.tmp.name).resolve()
-        with mock.patch.dict(os.environ, {"MAJLIS_ROOT": str(tmp / "env")}):
+        with mock.patch.dict(os.environ, {"MAJLES_ROOT": str(tmp / "env")}):
             self.assertEqual(bp.projects_root(str(tmp / "opt")), tmp / "opt")
             self.assertEqual(bp.projects_root(), tmp / "env")
         with mock.patch.dict(os.environ, {}, clear=True), mock.patch("os.getcwd", return_value=str(tmp)):
@@ -325,7 +376,7 @@ class Sync(Base):
         self.assertEqual(self.read("rules/b.md"), "rule b v2\n")  # the rest still syncs
         self.assertEqual(self.lock()["commit"], before)  # not advanced while a conflict stands
 
-    def test_take_replaces_a_local_edit_with_the_majlis_version(self):
+    def test_take_replaces_a_local_edit_with_the_majles_version(self):
         (self.project / "rules/a.md").write_text("edited here\n")
         self.put("rules/a.md", "rule a v2\n")
         code, _ = self.sync(take=["rules/a.md"])
@@ -340,7 +391,7 @@ class Sync(Base):
 
     def test_new_shared_file_is_added(self):
         self.put("rules/c.md", "rule c\n", commit=False)
-        self.put("majlis/manifest.txt", MANIFEST.replace("once   CLAUDE.md", "shared rules/c.md\nonce   CLAUDE.md"))
+        self.put("majles/manifest.txt", MANIFEST.replace("once   CLAUDE.md", "shared rules/c.md\nonce   CLAUDE.md"))
         self.sync()
         self.assertEqual(self.read("rules/c.md"), "rule c\n")
 
@@ -348,7 +399,7 @@ class Sync(Base):
         # New shared agents and a new template, added to [core] after the project was made.
         self.put("agents/tester.md", "tester\n", commit=False)
         self.put("docs/backlog.md", "# Backlog\n", commit=False)
-        self.put("majlis/manifest.txt", MANIFEST.replace(
+        self.put("majles/manifest.txt", MANIFEST.replace(
             "once   CLAUDE.md", "shared agents/tester.md\nonce   CLAUDE.md\nonce   docs/backlog.md"))
         code, out = self.sync(apply=False)
         self.assertIn("add     agents/tester.md", out)
@@ -365,15 +416,15 @@ class Sync(Base):
 
     def test_a_module_added_later_can_be_enabled_after_sync(self):
         self.put("optional/ai/ai.md", "ai\n", commit=False)
-        self.put("majlis/manifest.txt", MANIFEST + "\n[ai]\nshared optional/ai/ai.md -> agents/ai.md\n")
-        with self.assertRaises(bp.MajlisError):  # the project's recorded version has no ai module yet
+        self.put("majles/manifest.txt", MANIFEST + "\n[ai]\nshared optional/ai/ai.md -> agents/ai.md\n")
+        with self.assertRaises(bp.MajlesError):  # the project's recorded version has no ai module yet
             bp.cmd_enable(self.bp, "ai", self.project)
         self.sync()
         quiet(bp.cmd_enable, self.bp, "ai", self.project)
         self.assertEqual(self.read("agents/ai.md"), "ai\n")
 
     def test_file_dropped_from_the_manifest_is_removed_if_unedited(self):
-        self.put("majlis/manifest.txt", MANIFEST.replace("shared rules/b.md\n", ""))
+        self.put("majles/manifest.txt", MANIFEST.replace("shared rules/b.md\n", ""))
         self.sync()
         self.assertFalse((self.project / "rules/b.md").exists())
         self.assertNotIn("rules/b.md", self.lock()["files"])
@@ -429,12 +480,12 @@ class Modules(Base):
 
     def test_disable_refuses_when_a_shared_file_was_edited(self):
         (self.project / "design/README.md").write_text("edited\n")
-        with self.assertRaises(bp.MajlisError):
+        with self.assertRaises(bp.MajlesError):
             bp.cmd_disable(self.bp, "ui", self.project)
         self.assertTrue((self.project / "design/README.md").exists())
 
     def test_unknown_module_is_an_error(self):
-        with self.assertRaises(bp.MajlisError):
+        with self.assertRaises(bp.MajlesError):
             bp.cmd_enable(self.bp, "nope", self.project)
 
 
@@ -470,11 +521,11 @@ class Adopt(Base):
         self.assertIn("up to date", self.sync()[1])
 
     def test_refuses_a_project_already_adopted(self):
-        with self.assertRaises(bp.MajlisError):
+        with self.assertRaises(bp.MajlesError):
             bp.cmd_adopt(self.bp, self.project, ["core"], True, False)
 
     def test_unknown_module_is_an_error(self):
-        with self.assertRaises(bp.MajlisError):
+        with self.assertRaises(bp.MajlesError):
             bp.cmd_adopt(self.bp, self.existing(), ["core", "nope"], True, False)
 
 
@@ -495,7 +546,7 @@ class Check(Base):
         self.put("NOTES.md", "not in the manifest\n")
         self.assertEqual(self.check(), "")
 
-    def test_silent_outside_a_majlis_project(self):
+    def test_silent_outside_a_majles_project(self):
         self.assertEqual(quiet(bp.cmd_check, self.bp, pathlib.Path(self.tmp.name))[1], "")
 
     def test_never_raises(self):
@@ -695,7 +746,7 @@ class Lint(Base):
 
 class Hooks(Base):
     def test_a_synced_hook_is_executable(self):
-        self.put("majlis/manifest.txt", MANIFEST + "\n[core]\nshared .githooks/pre-push\n", commit=False)
+        self.put("majles/manifest.txt", MANIFEST + "\n[core]\nshared .githooks/pre-push\n", commit=False)
         self.put(".githooks/pre-push", "#!/bin/sh\nexit 0\n")
         self.assertEqual(self.sync()[0], 0)
         self.assertTrue(os.access(self.project / ".githooks/pre-push", os.X_OK))
@@ -777,7 +828,7 @@ class CheckLint(Base):
 
 
 class Packaged(unittest.TestCase):
-    """An installed Majlis: the template is a plain directory with no .git, one version only."""
+    """An installed Majles: the template is a plain directory with no .git, one version only."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -809,7 +860,7 @@ class Packaged(unittest.TestCase):
         self.assertEqual(lock["version"], "0.1.0")
         self.assertNotIn("commit", lock)
         self.assertEqual(lock["files"]["rules/a.md"], bp.digest(b"rule a v1\n"))
-        self.assertEqual(lock["source"], "majlis package")
+        self.assertEqual(lock["source"], "majles package")
 
     def test_a_directory_without_git_is_read_as_a_package(self):
         self.assertIsInstance(bp.as_source(self.v1), bp.PackageSource)
@@ -821,7 +872,7 @@ class Packaged(unittest.TestCase):
         src = self.v2(rules__a_md="rule a v2\n")
         code, out = quiet(bp.cmd_sync, src, self.project, False, False, [])
         self.assertEqual(code, 0)
-        self.assertIn("@0.1.0 -> majlis @0.2.0", out)
+        self.assertIn("@0.1.0 -> majles @0.2.0", out)
         self.assertIn("update  rules/a.md", out)
         self.assertNotIn("rules/b.md", out)
         quiet(bp.cmd_sync, src, self.project, True, False, [])
@@ -839,9 +890,9 @@ class Packaged(unittest.TestCase):
     def test_enable_works_on_the_installed_version_and_asks_for_sync_on_another(self):
         self.assertEqual(quiet(bp.cmd_enable, bp.PackageSource(self.v1, "0.1.0"), "i18n", self.project)[0], 0)
         self.assertEqual((self.project / "rules/i18n.md").read_text(), "i18n v1\n")
-        with self.assertRaises(bp.MajlisError):
+        with self.assertRaises(bp.MajlesError):
             bp.cmd_enable(self.v2(), "content", self.project)
-        with self.assertRaises(bp.MajlisError):
+        with self.assertRaises(bp.MajlesError):
             bp.cmd_disable(self.v2(), "i18n", self.project)
 
     def test_check_notices_a_new_version_and_is_silent_when_current(self):
@@ -868,7 +919,7 @@ class Version(unittest.TestCase):
         with contextlib.redirect_stdout(out), self.assertRaises(SystemExit) as e:
             bp.main(["--version"])
         self.assertEqual(e.exception.code, 0)
-        self.assertEqual(out.getvalue().strip(), f"majlis {bp.__version__}")
+        self.assertEqual(out.getvalue().strip(), f"majles {bp.__version__}")
 
 
 if __name__ == "__main__":

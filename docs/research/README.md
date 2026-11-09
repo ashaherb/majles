@@ -26,7 +26,7 @@ one page, ask for a Shallow request, or state the behaviour labelled
 request. A request is open until its `findings.md` is saved. Going over needs
 the developer's yes, asked once, with the requests ranked by what they block.
 
-`majlis lint` checks open requests against this page.
+`majles lint` checks open requests against this page.
 
 ## One directory per research task
 
@@ -73,7 +73,7 @@ Before starting a researcher, the main session searches every project's
 research:
 
 ```bash
-majlis research-find <words...>
+majles research-find <words...>
 ```
 
 It lists matching requests and decisions, newest first, and marks those older
@@ -90,8 +90,8 @@ rather than start over. The findings name it in their header.
    whose questions could change what it asks waits for the answers; the
    requesting agent records them in the request before research starts. A
    request no question touches may start at once.
-3. **The main session** runs `majlis lint`, checks the budget, and runs
-   `majlis research-find` for each request.
+3. **The main session** runs `majles lint`, checks the budget, and runs
+   `majles research-find` for each request.
 4. **The main session** starts a `researcher` per request, in parallel when
    they are independent, and saves each reply, unedited, as `findings.md`.
 5. **The main session** resumes the requesting agent, with its context intact.

@@ -41,13 +41,13 @@ and the findings ran to about 595 KB, far more than the decisions used.
 At most 4 open research requests per project, and at most 4 questions per
 request. A request is open from `request.md` until its `findings.md` is saved.
 Going over needs the developer's yes, asked once, with the requests ranked by
-what they block. `majlis lint` checks these rules.
+what they block. `majles lint` checks these rules.
 
 ## Only the main session starts the researcher
 
 No agent has the `Agent` tool. An agent that needs research writes its requests
-and hands back, naming their paths. The main session runs `majlis lint` and
-`majlis research-find` (a match from another project within 90 days goes to the
+and hands back, naming their paths. The main session runs `majles lint` and
+`majles research-find` (a match from another project within 90 days goes to the
 researcher as prior findings to confirm, not redo), starts the researchers, and
 saves each reply, **unedited**, as `findings.md`. Only the researcher searches
 the web; the critic may spot-check a claim.

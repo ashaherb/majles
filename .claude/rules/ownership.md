@@ -22,7 +22,7 @@
 | `ops/`, the CI directory (for example `.github/workflows/`), and `.githooks/pre-push.local` | ops | Deployment, environments, monitoring, backups, runbooks, and the project's pre-push checks |
 | `plan/` | the developer | Startup plan, phases, distribution, money |
 | `tools/` | anyone | Standalone scripts with no product dependency |
-| `.claude/rules/` | main session, at the developer's direction | These rules; shared ones change in the Majlis repository |
+| `.claude/rules/` | main session, at the developer's direction | These rules; shared ones change in the Majles repository |
 
 Read a directory's `README.md` before writing there. An agent asked to write
 outside its own directory says so and stops. A new top-level directory needs a

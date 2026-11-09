@@ -1,6 +1,6 @@
 # {{PROJECT_NAME}}
 
-> Created from the Majlis template. Setup deletes this line.
+> Created from the Majles template. Setup deletes this line.
 
 {{ONE_PARAGRAPH_DESCRIPTION}}
 

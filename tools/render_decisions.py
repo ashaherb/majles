@@ -425,7 +425,7 @@ def main():
     <div class="rules-grid">{render_rules()}</div>
   </section>
   <footer class="colophon"><p>The decision log's house style, shared by every project
-  built from the Majlis template. It is not the product's own design.</p></footer>
+  built from the Majles template. It is not the product's own design.</p></footer>
 </div>
 """
     pathlib.Path(sys.argv[1]).write_text(page, encoding="utf-8")

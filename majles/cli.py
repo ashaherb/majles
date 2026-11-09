@@ -1,39 +1,39 @@
 #!/usr/bin/env python3
 """
-majlis: create projects from the Majlis template, and keep them in step with it.
+majles: create projects from the Majles template, and keep them in step with it.
 
-Zero dependencies. Python 3.10+. Run it from anywhere (or as `python3 -m majlis`):
+Zero dependencies. Python 3.10+. Run it from anywhere (or as `python3 -m majles`):
 
-    majlis new <slug>                    create <root>/<slug>
-    majlis adopt [project] --modules M,... [--apply]
-                                           bring an existing project under Majlis
-    majlis enable <module> [project]        turn a module on (ui, i18n, content, ai, legal, beads)
-    majlis disable <module> [project]       turn a module off
-    majlis sync [project] [--apply] [--diff] [--take PATH ...]
-    majlis sync --all [--apply]             every project under <root>
-    majlis check [project]                  notice if behind or lint finds anything;
+    majles new <slug>                    create <root>/<slug>
+    majles adopt [project] --modules M,... [--apply]
+                                           bring an existing project under Majles
+    majles enable <module> [project]        turn a module on (ui, i18n, content, ai, legal, beads)
+    majles disable <module> [project]       turn a module off
+    majles sync [project] [--apply] [--diff] [--take PATH ...]
+    majles sync --all [--apply]             every project under <root>
+    majles check [project]                  notice if behind or lint finds anything;
                                            the SessionStart hook
-    majlis detach <path> [project]          the project takes over a shared file
-    majlis lint [project]                   check research, ADRs, standing-text size and the main guard
-    majlis placeholders [project]           placeholders left in the files the project owns
-    majlis research-find <words...>         find earlier research in every project
-    majlis migrate [project]               move a project made before the rename onto Majlis
+    majles detach <path> [project]          the project takes over a shared file
+    majles lint [project]                   check research, ADRs, standing-text size and the main guard
+    majles placeholders [project]           placeholders left in the files the project owns
+    majles research-find <words...>         find earlier research in every project
+    majles migrate [project]               move a project made before the rename onto Majles
 
 [project] defaults to the current directory. <root>, the directory that holds
-your projects, is --root if given, else $MAJLIS_ROOT, else the current
+your projects, is --root if given, else $MAJLES_ROOT, else the current
 directory. A path given to `new` that contains a slash, or is absolute, is used
 as is.
 
-majlis/manifest.txt sorts every file into "shared" (Majlis owns it; sync
+majles/manifest.txt sorts every file into "shared" (Majles owns it; sync
 keeps projects identical to it) or "once" (a template copied at
 creation that the project owns from then on).
 
-Each project records what it received in .majlis.json: the Majlis version it
+Each project records what it received in .majles.json: the Majles version it
 last synced to, its modules, and a hash of every shared file as it
 was delivered. A shared file whose hash no longer matches was edited in the
 project. Sync reports it and leaves it alone rather than overwrite that work.
 
-The template comes from one of two places. Run from a git checkout of Majlis,
+The template comes from one of two places. Run from a git checkout of Majles,
 content comes from the checkout's committed HEAD, never from its working tree,
 and the lock records that commit. Installed as a package (pip, pipx), content
 comes from the template packaged with it, and the lock records the package
@@ -61,33 +61,38 @@ from . import __version__
 
 BP_ROOT = pathlib.Path(__file__).resolve().parent.parent  # the checkout, when run from one
 PACKAGED = pathlib.Path(__file__).resolve().parent / "template"  # the template, in a built wheel
-MANIFEST = "majlis/manifest.txt"
-LOCK = ".majlis.json"
-# Compatibility with projects made before the rename from "boilerplate" to Majlis.
-LEGACY_MANIFEST = "boilerplate/manifest.txt"  # where the manifest sat at older commits
-LEGACY_LOCK = ".boilerplate.json"
-LEGACY_HOOK_MARK = "/boilerplate/"  # the old SessionStart hook called the script by this path
-RENAMED = {".claude/rules/boilerplate.md": ".claude/rules/majlis.md"}  # old dest -> new dest
-# Modules Majlis no longer ships, with the shared files each one installed. Sync keeps
+MANIFEST = "majles/manifest.txt"
+LOCK = ".majles.json"
+# Compatibility with projects made under the earlier names: "boilerplate", then "Majlis".
+LEGACY_MANIFESTS = ("majlis/manifest.txt", "boilerplate/manifest.txt")  # where the manifest sat at older commits
+LEGACY_LOCKS = (".majlis.json", ".boilerplate.json")  # newest first
+# The old SessionStart hooks: the boilerplate script by its path, then the `majlis` command.
+LEGACY_HOOK_MARKS = ("/boilerplate/", "majlis check")
+RENAMED = {  # old dest -> new dest
+    ".claude/rules/boilerplate.md": ".claude/rules/majles.md",
+    ".claude/rules/majlis.md": ".claude/rules/majles.md",
+}
+# Modules Majles no longer ships, with the shared files each one installed. Sync keeps
 # those files as the project's own (detached) and turns the module off; it never deletes them.
 RETIRED = {"studio": (".claude/agents/studio.md", ".claude/rules/studio.md")}
-HOOK_COMMAND = 'command -v majlis >/dev/null 2>&1 && majlis check "$CLAUDE_PROJECT_DIR" 2>/dev/null; exit 0'
+HOOK_COMMAND = 'command -v majles >/dev/null 2>&1 && majles check "$CLAUDE_PROJECT_DIR" 2>/dev/null; exit 0'
 DEFAULT_MODULES = ["core", "ui", "beads"]
-SELF = "majlis"
-ROOT_ENV = "MAJLIS_ROOT"
+SELF = "majles"
+ROOT_ENV = "MAJLES_ROOT"
+LEGACY_ROOT_ENV = "MAJLIS_ROOT"  # still read when the new one is not set
 
 
-class MajlisError(Exception):
+class MajlesError(Exception):
     """A problem the user must fix; printed without a traceback."""
 
 
-# ---------------------------------------------------------------- the Majlis checkout
+# ---------------------------------------------------------------- the Majles checkout
 
 
 def git(bp, *args):
     r = subprocess.run(["git", "-C", str(bp), *args], capture_output=True)
     if r.returncode:
-        raise MajlisError(f"git {' '.join(args)} failed in {bp}: {r.stderr.decode().strip()}")
+        raise MajlesError(f"git {' '.join(args)} failed in {bp}: {r.stderr.decode().strip()}")
     return r.stdout
 
 
@@ -117,7 +122,7 @@ def parse_manifest(text):
             continue
         kind, _, rest = line.partition(" ")
         if kind not in ("shared", "once") or not rest.strip() or module is None:
-            raise MajlisError(f"{MANIFEST}:{n}: expected 'shared|once <path>' under a [module]")
+            raise MajlesError(f"{MANIFEST}:{n}: expected 'shared|once <path>' under a [module]")
         src, arrow, dest = rest.strip().partition("->")
         src, dest = src.strip(), (dest.strip() if arrow else src.strip())
         entries.append((module, kind, src, dest))
@@ -125,15 +130,16 @@ def parse_manifest(text):
 
 
 def manifest_at(bp, commit):
-    try:
-        data = read_at(bp, commit, MANIFEST)
-    except MajlisError:
-        data = read_at(bp, commit, LEGACY_MANIFEST)  # a commit from before the rename
-    return parse_manifest(data.decode())
+    for path in (MANIFEST, *LEGACY_MANIFESTS):
+        try:
+            return parse_manifest(read_at(bp, commit, path).decode())
+        except MajlesError:
+            continue  # a commit from before a rename keeps its manifest elsewhere
+    raise MajlesError(f"no manifest at {commit}")
 
 
 class GitSource:
-    """The template at commits of a Majlis git checkout. The lock records a commit."""
+    """The template at commits of a Majles git checkout. The lock records a commit."""
 
     kind = "commit"
 
@@ -160,7 +166,7 @@ class GitSource:
 
 
 class PackageSource:
-    """The template packaged with an installed Majlis. It holds one version only,
+    """The template packaged with an installed Majles. It holds one version only,
     so it can read files at that version and no other. The lock records the version."""
 
     kind = "version"
@@ -173,8 +179,8 @@ class PackageSource:
 
     def read(self, ref, path):
         if ref != self.version:
-            raise MajlisError(f"this project is on Majlis {ref}, and the installed Majlis is {self.version}. "
-                              f"Run `{SELF} sync --apply` first, or install majlis=={ref}.")
+            raise MajlesError(f"this project is on Majles {ref}, and the installed Majles is {self.version}. "
+                              f"Run `{SELF} sync --apply` first, or install majles=={ref}.")
         return (self.root / path).read_bytes()
 
     def manifest(self, ref):
@@ -187,7 +193,7 @@ class PackageSource:
         return ref
 
     def describe(self):
-        return "majlis package"
+        return "majles package"
 
 
 def as_source(bp):
@@ -206,7 +212,7 @@ def default_source():
         return PackageSource(PACKAGED)
     if (BP_ROOT / MANIFEST).is_file():  # a source tree without git, such as an unpacked sdist
         return PackageSource(BP_ROOT)
-    raise MajlisError(f"no template found: neither a git checkout at {BP_ROOT} nor a packaged one at {PACKAGED}")
+    raise MajlesError(f"no template found: neither a git checkout at {BP_ROOT} nor a packaged one at {PACKAGED}")
 
 
 def recorded(lock):
@@ -238,7 +244,7 @@ def ref_for_modules(src, lock):
     """The ref enable and disable read the manifest at: the one the project is on."""
     ref = lock_ref(src, lock)
     if ref is None:
-        raise MajlisError(f"this project was last synced from a Majlis {recorded(lock)[0]}, and this Majlis "
+        raise MajlesError(f"this project was last synced from a Majles {recorded(lock)[0]}, and this Majles "
                           f"reads by {src.kind}. Run `{SELF} sync --apply` first.")
     return ref
 
@@ -251,9 +257,11 @@ def digest(data):
 
 
 def lock_path(project):
-    """The project's lock file: .majlis.json, or the pre-rename name while it is not migrated."""
-    if not (project / LOCK).exists() and (project / LEGACY_LOCK).exists():
-        return project / LEGACY_LOCK
+    """The project's lock file: .majles.json, or the pre-rename name while it is not migrated."""
+    if not (project / LOCK).exists():
+        for old in LEGACY_LOCKS:
+            if (project / old).exists():
+                return project / old
     return project / LOCK
 
 
@@ -264,7 +272,7 @@ def has_lock(project):
 def load_lock(project):
     path = lock_path(project)
     if not path.exists():
-        raise MajlisError(f"{project} has no {LOCK}: it was not created with Majlis")
+        raise MajlesError(f"{project} has no {LOCK}: it was not created with Majles")
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -281,8 +289,8 @@ def write(project, dest, data):
 
 
 def projects_root(arg=None):
-    """Where projects live: --root, then $MAJLIS_ROOT, then the current directory."""
-    chosen = arg or os.environ.get(ROOT_ENV) or "."
+    """Where projects live: --root, then $MAJLES_ROOT, then the current directory."""
+    chosen = arg or os.environ.get(ROOT_ENV) or os.environ.get(LEGACY_ROOT_ENV) or "."
     return pathlib.Path(chosen).expanduser().resolve()
 
 
@@ -299,7 +307,7 @@ def cmd_new(bp, target, root=None):
         project = (root or projects_root()) / target
     project = project.resolve()
     if project.exists() and any(project.iterdir()):
-        raise MajlisError(f"{project} already exists and is not empty")
+        raise MajlesError(f"{project} already exists and is not empty")
     source = as_source(bp)
     ref = source.current()
     lock = {"modules": list(DEFAULT_MODULES), "files": {}, "once": [], "detached": []}
@@ -315,7 +323,7 @@ def cmd_new(bp, target, root=None):
             lock["once"].append(dest)
     lock["once"].sort()
     save_lock(project, lock)
-    print(f"Created {project} from Majlis @{source.label(ref)}.")
+    print(f"Created {project} from Majles @{source.label(ref)}.")
     print(f"Next: cd {project} && claude, then say \"set up this project\".")
     return 0
 
@@ -329,13 +337,13 @@ def cmd_enable(bp, module, project):
     ref = ref_for_modules(source, lock)
     entries = [e for e in source.manifest(ref) if e[0] == module]
     if not entries:
-        raise MajlisError(f"no module '{module}' in the Majlis version this project is on "
+        raise MajlesError(f"no module '{module}' in the Majles version this project is on "
                       f"(@{source.label(ref)}). Sync first, or check the name.")
     clashes = [d for _, k, s, d in entries
                if k == "shared" and (project / d).exists()
                and (project / d).read_bytes() != source.read(ref, s)]
     if clashes:
-        raise MajlisError("these files already exist with different content: " + ", ".join(clashes))
+        raise MajlesError("these files already exist with different content: " + ", ".join(clashes))
     for _, kind, src, dest in entries:
         data = source.read(ref, src)
         if kind == "shared":
@@ -354,7 +362,7 @@ def cmd_enable(bp, module, project):
 
 def cmd_disable(bp, module, project):
     if module == "core":
-        raise MajlisError("core cannot be turned off")
+        raise MajlesError("core cannot be turned off")
     lock = load_lock(project)
     if module not in lock["modules"]:
         print(f"{module} is already off.")
@@ -364,7 +372,7 @@ def cmd_disable(bp, module, project):
     edited = [d for _, k, _, d in entries if k == "shared" and d in lock["files"]
               and (project / d).exists() and digest((project / d).read_bytes()) != lock["files"][d]]
     if edited:
-        raise MajlisError("edited in this project, so not removed: " + ", ".join(edited)
+        raise MajlesError("edited in this project, so not removed: " + ", ".join(edited)
                       + ". Restore them or delete them by hand first.")
     for _, kind, _, dest in entries:
         if kind == "shared" and dest in lock["files"]:
@@ -380,14 +388,14 @@ def cmd_disable(bp, module, project):
 
 
 def cmd_adopt(bp, project, modules, apply, show_diff):
-    """Bring a project that was not created with `new` under Majlis.
+    """Bring a project that was not created with `new` under Majles.
 
-    Every shared file is set to the Majlis version: added where missing,
+    Every shared file is set to the Majles version: added where missing,
     replaced where it differs. The dry run lists each replacement, so anything
     project-specific in those files can be moved to a project-owned file first.
     Once files are never overwritten; a missing one is added as a template."""
     if has_lock(project):
-        raise MajlisError(f"{project} already has {lock_path(project).name}; use sync")
+        raise MajlesError(f"{project} already has {lock_path(project).name}; use sync")
     if "core" not in modules:
         modules = ["core"] + modules
     source = as_source(bp)
@@ -395,10 +403,10 @@ def cmd_adopt(bp, project, modules, apply, show_diff):
     entries = source.manifest(ref)
     unknown = sorted(set(modules) - {m for m, _, _, _ in entries})
     if unknown:
-        raise MajlisError(f"unknown modules: {', '.join(unknown)}")
+        raise MajlesError(f"unknown modules: {', '.join(unknown)}")
     lock = {"modules": modules, "files": {}, "once": [], "detached": []}
     set_ref(source, lock, ref)
-    print(f"{project.name}: adopting Majlis @{source.label(ref)} with modules {', '.join(modules)}")
+    print(f"{project.name}: adopting Majles @{source.label(ref)} with modules {', '.join(modules)}")
     plan = []
     for module, kind, src, dest in entries:
         if module not in modules:
@@ -427,7 +435,7 @@ def cmd_adopt(bp, project, modules, apply, show_diff):
     lock["once"].sort()
     save_lock(project, lock)
     print(f"  adopted. Review with `git diff`, then: "
-          f"git add -A && git commit -m \"adopt majlis @{source.label(ref)}\"")
+          f"git add -A && git commit -m \"adopt majles @{source.label(ref)}\"")
     return 0
 
 
@@ -441,7 +449,7 @@ def plan_sync(bp, project, lock, commit, take=()):
     detached = set(lock.get("detached", []))
     actions, conflicts = [], []
     wanted = set()
-    moved = {}  # new dest -> old dest, for shared files Majlis renamed
+    moved = {}  # new dest -> old dest, for shared files Majles renamed
     shared_dests = {d for _, k, _, d in entries if k == "shared"}
     for old, new in RENAMED.items():
         if old not in lock["files"] or old in detached or new in lock["files"] or new not in shared_dests:
@@ -499,7 +507,7 @@ def plan_sync(bp, project, lock, commit, take=()):
         elif digest(p.read_bytes()) == recorded or dest in take:
             actions.append(("remove", dest, None))
         else:
-            conflicts.append((dest, "removed from Majlis, but edited here"))
+            conflicts.append((dest, "removed from Majles, but edited here"))
     return [a if len(a) == 4 else (*a, None) for a in actions], conflicts
 
 
@@ -516,7 +524,7 @@ def describe(project, action, dest, data, show_diff, old=None):
         if show_diff:
             print("\n".join("          " + l for l in diff))
     elif action == "release":
-        print(f"  keep    {dest}  (its module left Majlis: the file is now the project's own)")
+        print(f"  keep    {dest}  (its module left Majles: the file is now the project's own)")
     elif action in ("add", "add-template", "remove"):
         label = {"add": "add", "add-template": "add", "remove": "remove"}[action]
         extra = "  (template: the project owns it)" if action == "add-template" else ""
@@ -530,7 +538,7 @@ def cmd_sync(bp, project, apply, show_diff, take):
     take = {t.strip("/") for t in take}
     actions, conflicts = plan_sync(source, project, lock, commit, take)
     visible = [a for a in actions if a[0] not in ("track", "forget")]
-    print(f"{project.name}: @{recorded_label(lock)} -> majlis @{source.label(commit)}")
+    print(f"{project.name}: @{recorded_label(lock)} -> majles @{source.label(commit)}")
     if not visible and not conflicts:
         print("  up to date")
     for action, dest, data, old in actions:
@@ -538,8 +546,8 @@ def cmd_sync(bp, project, apply, show_diff, take):
     for dest, why in conflicts:
         print(f"  CONFLICT {dest}: {why}. Left untouched.")
     if conflicts:
-        print(f"  Resolve each one: `--take {conflicts[0][0]}` replaces it with the Majlis "
-              f"version, or `majlis detach {conflicts[0][0]}` keeps this project's version for good.")
+        print(f"  Resolve each one: `--take {conflicts[0][0]}` replaces it with the Majles "
+              f"version, or `majles detach {conflicts[0][0]}` keeps this project's version for good.")
     if not apply:
         if visible:
             print("  (dry run: nothing written. Add --apply to write.)")
@@ -570,7 +578,7 @@ def cmd_sync(bp, project, apply, show_diff, take):
     if visible or not conflicts:
         state = "synced" if not conflicts else "partly synced; the recorded version stays until conflicts are resolved"
         print(f"  {state}. Review with `git diff`, then: "
-              f"git add -A && git commit -m \"sync majlis @{source.label(commit)}\"")
+              f"git add -A && git commit -m \"sync majles @{source.label(commit)}\"")
     return 1 if conflicts else 0
 
 
@@ -580,7 +588,7 @@ def cmd_sync_all(bp, apply, show_diff, root=None):
     projects = sorted(p for p in root.iterdir()
                       if p.is_dir() and has_lock(p) and p.resolve() != bp.root.resolve())
     if not projects:
-        print(f"No projects under {root} were created with Majlis.")
+        print(f"No projects under {root} were created with Majles.")
         return 0
     status = 0
     for p in projects:
@@ -597,14 +605,14 @@ def update_notice(bp, project):
     if commit == ref:
         return None
     if source.kind == "commit" and ref is not None and not source.has(ref):
-        changed = ["(recorded commit not found in the Majlis checkout)"]
+        changed = ["(recorded commit not found in the Majles checkout)"]
     else:
         actions, conflicts = plan_sync(source, project, lock, commit)
         changed = [d for a, d, _, _ in actions if a not in ("track", "forget")] + [d for d, _ in conflicts]
     if not changed:
         return None
     n = len(changed)
-    return (f"Majlis update available: {n} shared file{'s' if n != 1 else ''} changed "
+    return (f"Majles update available: {n} shared file{'s' if n != 1 else ''} changed "
             f"since this project last synced. Preview with: {SELF} sync")
 
 
@@ -643,7 +651,7 @@ def cmd_check(bp, project):
             "hookSpecificOutput": {
                 "hookEventName": "SessionStart",
                 "additionalContext": msg + "\nMention this to the developer once. Do not sync unless "
-                                           "they ask (.claude/rules/majlis.md).",
+                                           "they ask (.claude/rules/majles.md).",
             },
         }))
     except Exception:
@@ -652,8 +660,8 @@ def cmd_check(bp, project):
 
 
 def migrate_notice(project):
-    if lock_path(project).name == LEGACY_LOCK:
-        return f"This project predates the rename to Majlis. Run: {SELF} migrate"
+    if lock_path(project).name in LEGACY_LOCKS:
+        return f"This project predates the rename to Majles. Run: {SELF} migrate"
     return None
 
 
@@ -663,30 +671,34 @@ def old_hook_commands(settings):
     for group in settings.get("hooks", {}).get("SessionStart", []):
         for hook in group.get("hooks", []):
             command = hook.get("command", "")
-            if LEGACY_HOOK_MARK in command and " check " in command:
+            if any(mark in command for mark in LEGACY_HOOK_MARKS) and " check " in command:
                 found.append(command)
     return found
 
 
 def cmd_migrate(project):
-    """Move a project made before the rename onto Majlis: the lock file and the hook.
+    """Move a project made under an earlier name onto Majles: the lock file and the hook.
     The renamed shared rule is moved by the next sync."""
     if not project.is_dir():
-        raise MajlisError(f"{project} is not a directory")
+        raise MajlesError(f"{project} is not a directory")
     changed = False
-    old_lock, new_lock = project / LEGACY_LOCK, project / LOCK
-    if old_lock.exists() and new_lock.exists():
-        raise MajlisError(f"{project} has both {LEGACY_LOCK} and {LOCK}; keep one by hand")
-    if old_lock.exists():
+    new_lock = project / LOCK
+    old_locks = [project / old for old in LEGACY_LOCKS if (project / old).exists()]
+    if old_locks and new_lock.exists():
+        raise MajlesError(f"{project} has both {old_locks[0].name} and {LOCK}; keep one by hand")
+    if len(old_locks) > 1:
+        raise MajlesError(f"{project} has {' and '.join(p.name for p in old_locks)}; keep one by hand")
+    if old_locks:
+        old_lock = old_locks[0]
         lock = json.loads(old_lock.read_text(encoding="utf-8"))
-        if "boilerplate" in lock:  # the pre-rename key for where the project came from
+        if "boilerplate" in lock:  # the oldest key for where the project came from
             lock["source"] = lock.pop("boilerplate")
         old_lock.rename(new_lock)
         save_lock(project, lock)
-        print(f"  renamed {LEGACY_LOCK} -> {LOCK}")
+        print(f"  renamed {old_lock.name} -> {LOCK}")
         changed = True
     elif not new_lock.exists():
-        raise MajlisError(f"{project} has no {LOCK}: it was not created with Majlis")
+        raise MajlesError(f"{project} has no {LOCK}: it was not created with Majles")
     settings_path = project / ".claude" / "settings.json"
     if settings_path.exists():
         raw = settings_path.read_text(encoding="utf-8")
@@ -702,7 +714,7 @@ def cmd_migrate(project):
             print("  updated the SessionStart hook in .claude/settings.json")
             changed = True
     if not changed:
-        print(f"{project.name}: already on Majlis")
+        print(f"{project.name}: already on Majles")
         return 0
     print(f"{project.name}: migrated. Next: `{SELF} sync` (moves the renamed rule), "
           "then review with `git diff` and commit on a branch.")
@@ -713,7 +725,7 @@ def cmd_detach(project, path):
     lock = load_lock(project)
     path = path.strip("/")
     if path not in lock["files"]:
-        raise MajlisError(f"{path} is not a shared file in this project")
+        raise MajlesError(f"{path} is not a shared file in this project")
     del lock["files"][path]
     lock["detached"] = sorted(set(lock.get("detached", [])) | {path})
     save_lock(project, lock)
@@ -889,7 +901,7 @@ PLACEHOLDER = re.compile(r"\{\{([A-Z_]+)\}\}")
 def placeholders(project):
     """`path:line: {{NAME}}` for every placeholder left in a file the project owns.
 
-    Only the files Majlis installed as the project's own (the lock's "once" list) are
+    Only the files Majles installed as the project's own (the lock's "once" list) are
     read, never footage, generated files or anything else in the repo."""
     lock = load_lock(project) if has_lock(project) else {"once": ["CLAUDE.md", "README.md"]}
     out = []
@@ -912,7 +924,7 @@ def setup_done(project):
 
 def cmd_placeholders(project):
     if not project.is_dir():
-        raise MajlisError(f"{project} is not a directory")
+        raise MajlesError(f"{project} is not a directory")
     found = placeholders(project)
     for f in found:
         print(f)
@@ -923,7 +935,7 @@ def cmd_placeholders(project):
 
 def cmd_lint(project):
     if not project.is_dir():
-        raise MajlisError(f"{project} is not a directory")
+        raise MajlesError(f"{project} is not a directory")
     findings = lint(project)
     for f in findings:
         print(f)
@@ -972,8 +984,8 @@ def cmd_research_find(words, root=None, today=None):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="majlis", description=__doc__.split("\n\n")[0])
-    ap.add_argument("--version", action="version", version=f"majlis {__version__}")
+    ap = argparse.ArgumentParser(prog="majles", description=__doc__.split("\n\n")[0])
+    ap.add_argument("--version", action="version", version=f"majles {__version__}")
     ap.add_argument("--root", help="the directory that holds your projects "
                     f"(default: ${ROOT_ENV}, else the current directory)")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -1023,8 +1035,8 @@ def main(argv=None):
             return cmd_research_find(a.words, root)
         if a.cmd == "migrate":
             return cmd_migrate(resolve_project(a.project))
-    except MajlisError as e:
-        print(f"majlis: {e}", file=sys.stderr)
+    except MajlesError as e:
+        print(f"majles: {e}", file=sys.stderr)
         return 2
 
 

@@ -23,7 +23,7 @@ The rules that hold everywhere:
    follows the commit style: imperative, lowercase, under ~70 characters.
 
 `.githooks/pre-push` refuses any push to `main`. Turn it on once per clone with
-`git config core.hooksPath .githooks`; `majlis lint` reports a clone where it is
+`git config core.hooksPath .githooks`; `majles lint` reports a clone where it is
 off. The only exception is the first push of a new repo, before a pull request
 can exist: `ALLOW_MAIN_PUSH=1 git push -u origin main`.
 

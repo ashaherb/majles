@@ -1,4 +1,4 @@
-# Maintaining Majlis
+# Maintaining Majles
 
 The starting point for every new product. It provides an
 agent team (architect, product, designer, builder, tester, critic, security,
@@ -13,13 +13,13 @@ project.
 ## Starting a new project
 
 ```bash
-export MAJLIS_ROOT=~/projects       # where your projects live; default: the current directory
-majlis new <project-slug>           # creates $MAJLIS_ROOT/<project-slug>
-cd "$MAJLIS_ROOT/<project-slug>"
+export MAJLES_ROOT=~/projects       # where your projects live; default: the current directory
+majles new <project-slug>           # creates $MAJLES_ROOT/<project-slug>
+cd "$MAJLES_ROOT/<project-slug>"
 claude
 ```
 
-The projects root is `--root` if given, else `$MAJLIS_ROOT`, else the current
+The projects root is `--root` if given, else `$MAJLES_ROOT`, else the current
 directory. `new`, `sync --all` and `research-find` use it. A path given to `new`
 that contains a slash, or is absolute, is used as is.
 
@@ -27,35 +27,35 @@ Then say **"set up this project"** and describe it, in as much or as little
 detail as you have. Claude fills in what it can from what you said, asks one
 batch of questions for the rest, and does the setup below.
 
-`majlis new` copies only what a project ships with. This file, `majlis/`
-and `optional/` stay here. It also writes `.majlis.json`, which records what
+`majles new` copies only what a project ships with. This file, `majles/`
+and `optional/` stay here. It also writes `.majles.json`, which records what
 the project received, and is how it stays in step with the template later.
 
-Install `majlis` with `pipx install majlis` or `uv tool install majlis` (or
+Install `majles` with `pipx install majles` or `uv tool install majles` (or
 `pip install .` from a checkout). Installed, it carries the template for its own version and records
-that version in `.majlis.json`. To track `main` instead, run it from a checkout
-of this repository: put a `majlis` on your PATH that runs `python3 -m majlis`
-from it (for example a one-line shell script), or run `python3 -m majlis` from
+that version in `.majles.json`. To track `main` instead, run it from a checkout
+of this repository: put a `majles` on your PATH that runs `python3 -m majles`
+from it (for example a one-line shell script), or run `python3 -m majles` from
 the checkout itself. Run from a checkout, it reads the checkout's committed
-HEAD and records the commit. The SessionStart hook calls `majlis check`, and
-stays silent when `majlis` is not on PATH.
+HEAD and records the commit. The SessionStart hook calls `majles check`, and
+stays silent when `majles` is not on PATH.
 
 ## Keeping projects up to date
 
 A project **shares** the agents, most rules, the `docs/` READMEs and the
 renderer with the template. It **owns** `CLAUDE.md`, `README.md`,
 `constraints.md`, its settings, and anything it creates.
-`majlis/manifest.txt` is the full list.
+`majles/manifest.txt` is the full list.
 
 When the template changes, each project's next session opens with a notice
 that updates are available. Nothing changes until you ask:
 
 ```bash
-majlis sync                  # preview this project's update: what changes, +/- lines
-majlis sync --diff           # the same, with full diffs
-majlis sync --apply          # write it; then review with git diff, commit on a branch, open a PR
-majlis sync --all            # preview every project under the projects root
-majlis sync --all --apply    # update them all; each still needs its own commit
+majles sync                  # preview this project's update: what changes, +/- lines
+majles sync --diff           # the same, with full diffs
+majles sync --apply          # write it; then review with git diff, commit on a branch, open a PR
+majles sync --all            # preview every project under the projects root
+majles sync --all --apply    # update them all; each still needs its own commit
 ```
 
 If a project has edited a shared file, sync reports a **conflict** and leaves
@@ -63,13 +63,13 @@ that file alone, while everything else still updates. Resolve it one of two
 ways:
 
 - `--take <path>` replaces the project's edit with the template's version.
-- `majlis detach <path>` makes the file the project's own, and sync skips it
+- `majles detach <path>` makes the file the project's own, and sync skips it
   from then on.
 
 The project's recorded version does not advance while a conflict stands, so the
 notice keeps appearing until the conflict is resolved.
 
-Sync only reaches projects that have a `.majlis.json`. A project without one
+Sync only reaches projects that have a `.majles.json`. A project without one
 is never touched.
 
 When the template renames a shared file, sync moves it: the old path is removed
@@ -78,21 +78,21 @@ is a conflict, resolved the same way.
 
 ### Projects made before the rename
 
-Projects made under Majlis's earlier name have the lock file under that name,
+Projects made under Majles's earlier name have the lock file under that name,
 and a SessionStart hook that calls the old script by path. The CLI still reads
-the old lock file when `.majlis.json` is missing, and `check` says so. To move
+the old lock file when `.majles.json` is missing, and `check` says so. To move
 a project over:
 
 ```bash
-majlis migrate [project]   # renames the lock file, and rewrites the old SessionStart hook
-majlis sync --apply        # moves the renamed rule to .claude/rules/majlis.md
+majles migrate [project]   # renames the lock file, and rewrites the old SessionStart hook
+majles sync --apply        # moves the renamed rule to .claude/rules/majles.md
 ```
 
 ## Checking research and ADRs
 
 ```bash
-majlis lint [project]              # read only; exit 0 when clean, 1 otherwise
-majlis research-find <words...>    # earlier research in every project, newest first
+majles lint [project]              # read only; exit 0 when clean, 1 otherwise
+majles research-find <words...>    # earlier research in every project, newest first
 ```
 
 `lint` checks the research rules a script can check. Every open request (a
@@ -109,7 +109,7 @@ not flooded with findings about work already done.
 
 The session-start hook runs `lint` too, and adds one line to its notice when it
 finds anything. Existing projects get this without changing their settings,
-because the hook already calls `majlis check`.
+because the hook already calls `majles check`.
 
 `research-find` searches the request titles and "The decision" sections of every
 project under the projects root, case-insensitively, for all the words given. Matches
@@ -119,8 +119,8 @@ any researcher (`.claude/rules/research.md`).
 ## Bringing an existing project in
 
 ```bash
-majlis adopt <project> --modules core,ui,i18n,content              # dry run
-majlis adopt <project> --modules core,ui,i18n,content --apply
+majles adopt <project> --modules core,ui,i18n,content              # dry run
+majles adopt <project> --modules core,ui,i18n,content --apply
 ```
 
 Adoption sets every shared file to the template's version, adding missing
@@ -140,10 +140,10 @@ template `CLAUDE.md` points a new session at it, and setup deletes it when done.
 
 ```
 MAINTAINING.md            this guide; stays here
-majlis/cli.py             new, adopt, enable, disable, sync, check, detach,
-                          lint, research-find, migrate; `python3 -m majlis`
-majlis/manifest.txt       every shipped file, as shared or once, by module
-majlis/test_*.py          tests for the CLI, and checks on the template itself
+majles/cli.py             new, adopt, enable, disable, sync, check, detach,
+                          lint, research-find, migrate; `python3 -m majles`
+majles/manifest.txt       every shipped file, as shared or once, by module
+majles/test_*.py          tests for the CLI, and checks on the template itself
 .githooks/pre-push        refuses pushes to main, then runs pre-push.local
 template/CLAUDE.md        template: the product, the MVP, the current phase
 template/README.md        template: what it is, and how to run, test and deploy
@@ -152,13 +152,13 @@ CLAUDE.md, README.md      this repo's own, for its maintainers and visitors;
                           never shipped
 LICENSE, DECISIONS.md     this repo's own; never shipped
 pyproject.toml, setup.py  the package; setup.py copies the manifest's files into
-                          the wheel under majlis/template/
+                          the wheel under majles/template/
 CHANGELOG.md              what changes in a project at each release
 .claude/agents/           architect, product, designer, builder, tester, critic,
                           security, ops, researcher
 .claude/rules/            decisions, done, asking, tokens, code-organization,
                           ownership, research, agents, working-style, git,
-                          majlis (shared); constraints, git-account (template)
+                          majles (shared); constraints, git-account (template)
 .claude/settings.json     template: the fallback model, the .env read-deny, and
                           the update-notice hook
 docs/                     adr, specs, reviews, security, research and status, each
@@ -180,10 +180,10 @@ optional/beads/           the work-queue rule, for Beads (bd) and its local boar
 
 Make the change on a branch, open a pull request, and merge it. Projects
 receive it the next time they sync. Sync reads the committed HEAD of the
-checkout `majlis` runs from, so keep that checkout on `main` and pull it after
+checkout `majles` runs from, so keep that checkout on `main` and pull it after
 each merge. Projects on the installed package receive it at the next release.
 
-To release, bump `__version__` in `majlis/__init__.py`, add a `CHANGELOG.md`
+To release, bump `__version__` in `majles/__init__.py`, add a `CHANGELOG.md`
 entry that says what changes in a project, and build with
 `python3 -m pip wheel . --no-deps -w dist`. The wheel holds only the files
 the manifest lists, so a file missing from the manifest never ships.
@@ -192,11 +192,11 @@ Keep every shared file product-neutral and free of placeholders. A fact about a
 specific product belongs in a file the project owns. A behaviour only some
 projects need belongs in a module.
 
-To add a file, put it in `majlis/manifest.txt` under the right module, as
+To add a file, put it in `majles/manifest.txt` under the right module, as
 `shared` or `once`. Before committing, run:
 
 ```bash
-python3 -m unittest discover -s majlis -p 'test_*.py'
+python3 -m unittest discover -s majles -p 'test_*.py'
 python3 -m unittest tools/test_render_decisions.py tools/test_render_status.py
 ```
 

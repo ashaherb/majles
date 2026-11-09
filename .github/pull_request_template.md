@@ -9,7 +9,7 @@
 ## Checks
 
 - [ ] The tests pass locally (see `CONTRIBUTING.md`).
-- [ ] New shipped files are in `majlis/manifest.txt`.
+- [ ] New shipped files are in `majles/manifest.txt`.
 - [ ] `CHANGELOG.md` says what changes in a user's project.
 - [ ] Shared files carry no placeholder and name no particular product.
 - [ ] Under about 1,000 added lines.

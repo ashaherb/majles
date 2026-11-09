@@ -1,8 +1,8 @@
-# Majlis maintainer notes
+# Majles maintainer notes
 
-This repo is the source of Majlis, not a project made with it. Majlis gives a
+This repo is the source of Majles, not a project made with it. Majles gives a
 Claude Code project an agent team, working rules and a decision log, and keeps
-them current with `majlis sync`.
+them current with `majles sync`.
 
 **Never fill a `{{PLACEHOLDER}}` here, and never run setup on this repo.** The
 template is what ships to projects:
@@ -13,10 +13,10 @@ template is what ships to projects:
 - The files a project owns ship from `template/` (its `CLAUDE.md` and
   `README.md`) or from their own paths (`.claude/settings.json`,
   `.claude/rules/constraints.md`, `docs/direction.md`, `docs/research/backlog.md`).
-- Modules are in `optional/`. `majlis/manifest.txt` is the full list.
+- Modules are in `optional/`. `majles/manifest.txt` is the full list.
 - This file, `README.md`, `LICENSE`, `DECISIONS.md`, `CHANGELOG.md`, the
   packaging files and `.github/` belong to this repo and never ship.
-  `majlis/test_template.py` keeps that list.
+  `majles/test_template.py` keeps that list.
 
 The agents and rules in `.claude/` load here too, because the template is
 dogfooded. Where one of them gives a per-project instruction (Phase 0, slices,
@@ -32,7 +32,7 @@ ADRs), it does not apply to this repo.
 - Tests, about 30 seconds:
 
   ```bash
-  python3 -m unittest discover -s majlis -p 'test_*.py'
+  python3 -m unittest discover -s majles -p 'test_*.py'
   python3 -m unittest tools/test_render_decisions.py tools/test_render_status.py
   ```
 

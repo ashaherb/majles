@@ -1,4 +1,4 @@
-# Majlis decisions
+# Majles decisions
 
 Why the code looks the way it does. Newest last. An entry is never rewritten or
 deleted; a later one supersedes it and says why.
@@ -26,7 +26,7 @@ every session of someone's project has to earn trust before it asks for any.
 Choice. v0.1 sends nothing. Any telemetry is a later release, opt-in and off
 until the user says yes.
 
-**Consequence:** the README can say plainly that Majlis makes no network calls.
+**Consequence:** the README can say plainly that Majles makes no network calls.
 Adoption is measured from outside the tool until then: stars, downloads,
 issues.
 
@@ -40,7 +40,7 @@ would have seen a page of placeholders.
 Choice. They live in `template/`, and the manifest ships them to the project's
 root (`once template/CLAUDE.md -> CLAUDE.md`). The root `CLAUDE.md` is
 maintainer notes, and the root `README.md` is the public page.
-`majlis/test_template.py` fails if either is listed as shipped, or carries a
+`majles/test_template.py` fails if either is listed as shipped, or carries a
 placeholder or a setup block.
 
 **Consequence:** a project's lock file records these files by their
@@ -60,21 +60,36 @@ Choice. One workflow, on ready pull requests only, matching
 macOS only when the repo is public, where Actions minutes are free. The switch
 is an expression on `github.event.repository.private`, so going public needs no
 edit. Each job also builds the wheel, installs it into a fresh virtual
-environment and runs `majlis new`.
+environment and runs `majles new`.
 
 **Consequence:** while private, macOS behaviour is checked only by local runs.
 
-## 5. The studio module is not part of Majlis
+## 5. The studio module is not part of Majles
 
 Problem. The `studio` module harvested reusable game code into one shared
 repository on the author's machine. It assumed a particular way of working
 across several games, which most users do not have.
 
-Choice. It is not shipped. `majlis enable` offers `ui`, `i18n`, `content`,
+Choice. It is not shipped. `majles enable` offers `ui`, `i18n`, `content`,
 `ai`, `legal` and `beads`.
 
 **Consequence:** sync would have deleted the studio files from a project that
-had the module, since they left the manifest. `RETIRED` in `majlis/cli.py`
+had the module, since they left the manifest. `RETIRED` in `majles/cli.py`
 names a retired module's files, and sync keeps them as the project's own
 (detached) and turns the module off. Any module retired later goes in that list
 too.
+
+## 6. The name is Majles
+
+Problem. The tool was named Majlis while it was being built. Before launch, the
+maintainer settled on Majles, the same word ("the sitting"), spelled as it is said.
+
+Choice. Majles everywhere: the package, the module, the `majles` command, the lock file
+`.majles.json`, the shared rule `.claude/rules/majles.md`, the docs and these entries,
+which were renamed in place because none of it had been released. The Arabic name,
+مجلس, does not change.
+
+**Consequence:** projects made under the earlier names keep working. The CLI reads
+`.majlis.json` and `.boilerplate.json`, `majles migrate` converts them and the old
+SessionStart hook, and the next sync moves the old rule file. The old name appears only
+in that compatibility code, its tests, and the changelog.

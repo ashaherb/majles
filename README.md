@@ -1,28 +1,28 @@
-<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/logo-dark.svg"><img src=".github/logo.svg" width="112" alt="Majlis logo: a board with two sleepy saffron eyes"></picture></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/logo-dark.svg"><img src=".github/logo.svg" width="112" alt="Majles logo: a board with two sleepy saffron eyes"></picture></p>
 
-# Majlis
+# Majles
 
 **Your idea. Your team. Your call.**
 
 A full team of AI agents for your idea, working in front of you, step by step.
 
-A majlis is the room where people sit together to talk something through
-before anyone acts. Majlis gives each new Claude Code project one: an
+A majles is the room where people sit together to talk something through
+before anyone acts. Majles gives each new Claude Code project one: an
 architect, a product lead, a builder, a tester, a critic and others, each with
 a narrow job, a set of rules with the reason behind each one, a research
 protocol that only investigates what blocks the next step, and a decision log
 you can publish as a page. It ships no stack and no product code. Those are the
 first decisions your project makes, with the team.
 
-> **Status: pre-release.** Majlis is not on PyPI yet. Until it is, clone this
-> repo and run `pipx install ./majlis` (or `uv tool install ./majlis`), or run it
+> **Status: pre-release.** Majles is not on PyPI yet. Until it is, clone this
+> repo and run `pipx install ./majles` (or `uv tool install ./majles`), or run it
 > without installing (below).
 
 ## Quick start
 
 ```bash
-pipx install majlis        # or: uv tool install majlis
-majlis new my-idea
+pipx install majles        # or: uv tool install majles
+majles new my-idea
 cd my-idea && claude
 ```
 
@@ -32,8 +32,8 @@ the right modules on (more than one language, an AI feature), creates the repo,
 and leaves a `CLAUDE.md` whose last line says what comes next. Start the first
 phase with "run the architect on the Phase 0 brief in CLAUDE.md".
 
-From a clone, without installing: `PYTHONPATH=<clone> python3 -m majlis new my-idea`.
-Run that way, `majlis sync` follows the clone's committed `main`.
+From a clone, without installing: `PYTHONPATH=<clone> python3 -m majles new my-idea`.
+Run that way, `majles sync` follows the clone's committed `main`.
 
 Requires Python 3.10 or later, Git, and Claude Code. The GitHub CLI (`gh`) is
 used when setup creates the repo.
@@ -82,7 +82,7 @@ gate without your yes.
 
 ## Modules
 
-Turn one on with `majlis enable <module>`, off with `majlis disable <module>`:
+Turn one on with `majles enable <module>`, off with `majles disable <module>`:
 
 | Module | For |
 | --- | --- |
@@ -94,45 +94,45 @@ Turn one on with `majlis enable <module>`, off with `majlis disable <module>`:
 
 ## It stays current
 
-Most starters are a copy: useful on day one, frozen from then on. Majlis
+Most starters are a copy: useful on day one, frozen from then on. Majles
 records what each project received, and splits the files in two:
 
 - **Shared** files (the agents, most rules, the docs READMEs, the renderers)
-  belong to Majlis. When they improve, your next session opens with a one-line
+  belong to Majles. When they improve, your next session opens with a one-line
   notice.
 - **Owned** files (`CLAUDE.md`, `README.md`, your settings and constraints, and
   everything you create) belong to the project. Nothing touches them.
 
 ```bash
-majlis sync            # preview: what changes, with line counts
-majlis sync --apply    # write it; review with git diff, commit on a branch
+majles sync            # preview: what changes, with line counts
+majles sync --apply    # write it; review with git diff, commit on a branch
 ```
 
 If you edited a shared file, sync calls it a conflict and leaves it alone
-while the rest updates. Take Majlis's version with `--take <path>`, or make the
-file yours for good with `majlis detach <path>`. Each release's changes to a
+while the rest updates. Take Majles's version with `--take <path>`, or make the
+file yours for good with `majles detach <path>`. Each release's changes to a
 project are in `CHANGELOG.md`.
 
 ## Commands
 
 ```text
-majlis new <slug>        create a project
-majlis enable <module>   turn a module on      majlis disable <module>
-majlis sync              preview updates       --apply, --diff, --all, --take <path>
-majlis detach <path>     stop syncing a file
-majlis lint              check the research, decision and size rules
-majlis research-find <words>  search earlier research across your projects
-majlis adopt <path>      bring an existing project in
-majlis migrate           move a project from an older template onto Majlis
+majles new <slug>        create a project
+majles enable <module>   turn a module on      majles disable <module>
+majles sync              preview updates       --apply, --diff, --all, --take <path>
+majles detach <path>     stop syncing a file
+majles lint              check the research, decision and size rules
+majles research-find <words>  search earlier research across your projects
+majles adopt <path>      bring an existing project in
+majles migrate           move a project from an older template onto Majles
 ```
 
-Projects are created in the current directory, or under `MAJLIS_ROOT` when set
-(`--root <dir>` overrides both). `majlis --version` prints the version.
+Projects are created in the current directory, or under `MAJLES_ROOT` when set
+(`--root <dir>` overrides both). `majles --version` prints the version.
 
 ## What it costs
 
-Majlis is free. The agents run in your Claude Code session, so they use your
-Claude plan. Majlis makes no calls of its own and sends nothing anywhere: there
+Majles is free. The agents run in your Claude Code session, so they use your
+Claude plan. Majles makes no calls of its own and sends nothing anywhere: there
 is no telemetry. The heavy agents are the Opus ones and the Fable-pinned
 100x-engineer, which runs rarely, before a release. On a smaller plan, move
 those to Sonnet: every agent's `model:` line can be changed in your project,
@@ -153,7 +153,7 @@ replacement first.
 Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md)
 first; the maintainer guide is [MAINTAINING.md](MAINTAINING.md).
 
-If Majlis saves you time, you can [sponsor the project](https://github.com/sponsors/ashaherb).
+If Majles saves you time, you can [sponsor the project](https://github.com/sponsors/ashaherb).
 
 ## License
 

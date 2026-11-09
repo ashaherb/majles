@@ -1,12 +1,12 @@
 # Every file the template ships, sorted into modules.
 #
-#   shared  owned by Majlis. `majlis sync` keeps projects identical to it.
+#   shared  owned by Majles. `majles sync` keeps projects identical to it.
 #           A shared file must never contain a {{PLACEHOLDER}}.
 #   once    a template copied when the project or module is created. The project
 #           owns it from then on, and sync never touches it again.
 #
 # `src -> dest` when the file lands somewhere else in the project.
-# New projects get [core] and [ui]. The others are added with `majlis enable`.
+# New projects get [core] and [ui]. The others are added with `majles enable`.
 
 [core]
 shared .claude/agents/architect.md
@@ -20,7 +20,7 @@ shared .claude/agents/tester.md
 shared .claude/agents/100x-engineer.md
 shared .claude/rules/agents.md
 shared .claude/rules/asking.md
-shared .claude/rules/majlis.md
+shared .claude/rules/majles.md
 shared .claude/rules/code-organization.md
 shared .claude/rules/decisions.md
 shared .claude/rules/done.md

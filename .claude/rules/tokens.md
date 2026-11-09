@@ -39,7 +39,7 @@ conversation.
 what every agent needs on every task: the product, the non-negotiables, the
 current slice and status, and how we work. Plans for later slices, history and
 detail live in `docs/` and are read when needed. Finished work is in git, not
-in **Next:**. `majlis lint` flags a `CLAUDE.md` over 16 KB and a rule over 5 KB.
+in **Next:**. `majles lint` flags a `CLAUDE.md` over 16 KB and a rule over 5 KB.
 
 **Why:** in an earlier project, measured over one day: 109 agents, about 21,000
 calls. One builder ran 3,060 calls at about 500,000 tokens of context each, 23%

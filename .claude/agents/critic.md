@@ -44,7 +44,7 @@ blocking findings were resolved.
   or findings the decision never used. Usually non-blocking, but name it; it is
   what slows a phase down.
 - The rules a script can check: run
-  `majlis lint` and include
+  `majles lint` and include
   what it reports (`.claude/rules/research.md`).
 
 **Process**

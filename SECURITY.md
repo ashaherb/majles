@@ -1,6 +1,6 @@
 # Security
 
-Majlis runs inside your projects. Its SessionStart hook executes a command at
+Majles runs inside your projects. Its SessionStart hook executes a command at
 the start of every Claude Code session, and its rules decide what the agents
 may read. A flaw in either matters, so please report one privately.
 
@@ -17,7 +17,7 @@ and you are credited unless you ask not to be.
 
 - The SessionStart hook, and anything else that runs code without the user
   asking for it.
-- `majlis` writing outside the project it was pointed at, or overwriting a file
+- `majles` writing outside the project it was pointed at, or overwriting a file
   the project owns.
 - Rules or settings that let an agent read a secret: `.env` files, keys,
   service-account files.

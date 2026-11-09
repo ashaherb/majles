@@ -1,5 +1,5 @@
 name: Bug report
-description: Something Majlis did that it should not have, or did not do.
+description: Something Majles did that it should not have, or did not do.
 labels: [bug]
 body:
   - type: textarea
@@ -19,7 +19,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Majlis version or commit
+      label: Majles version or commit
       placeholder: "0.1.0, or a commit hash"
   - type: input
     id: env

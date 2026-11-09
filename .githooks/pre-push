@@ -1,5 +1,5 @@
 #!/bin/sh
-# Shared with the Majlis template: do not edit here. Put this project's own checks in
+# Shared with the Majles template: do not edit here. Put this project's own checks in
 # .githooks/pre-push.local, which this hook runs after the main-branch guard.
 #
 # Refuses any push to main: main changes only through a merged pull request
@@ -17,8 +17,8 @@ if [ "${ALLOW_MAIN_PUSH:-}" != 1 ]; then
   done || exit 1
 fi
 # Warns, never refuses, when a branch adds more than PR_ADDED_LIMIT lines over
-# main, deletions and lockfiles not counted (.claude/rules/git.md). Files Majlis
-# installed and nobody has changed (their hash still matches .majlis.json) are not
+# main, deletions and lockfiles not counted (.claude/rules/git.md). Files Majles
+# installed and nobody has changed (their hash still matches .majles.json) are not
 # counted either, so a first adoption or a sync does not trip it.
 limit="${PR_ADDED_LIMIT:-1000}"
 # Reads `git diff --numstat` on stdin; prints the lines added outside unchanged template files.
@@ -33,7 +33,7 @@ rev = sys.argv[1]
 def show(path):
     r = subprocess.run(["git", "show", f"{rev}:{path}"], capture_output=True)
     return r.stdout if r.returncode == 0 else None
-lock = show(".majlis.json")
+lock = show(".majles.json")
 files = json.loads(lock).get("files", {}) if lock else {}
 n = 0
 for line in sys.stdin:

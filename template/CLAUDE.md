@@ -1,16 +1,16 @@
 <!-- SETUP: this whole block is deleted once the project is set up. -->
 # Setup: delete this section when done
 
-**If this directory is the Majlis repository itself (it has `MAINTAINING.md`
+**If this directory is the Majles repository itself (it has `MAINTAINING.md`
 at its root), you are maintaining the template. Fill nothing in, and follow
 `MAINTAINING.md`.**
 
-Otherwise, this project was just created from the Majlis template and is not set
+Otherwise, this project was just created from the Majles template and is not set
 up yet. Before any other work, follow `SETUP.md` in this project. In short:
 
 1. Get the project description from the developer.
 2. Fill every `{{PLACEHOLDER}}` you can derive. Ask for the rest in one batch.
-3. Turn modules on or off with `majlis`.
+3. Turn modules on or off with `majles`.
 4. Create the repo.
 5. Publish the decision log.
 6. Delete this section, the template line in `README.md`, and `SETUP.md`.
@@ -158,7 +158,7 @@ every agent automatically, and each rule is short and carries its reason:
 - `working-style.md`: disagree out loud, and give the tradeoff.
 - `git.md`: branches and pull requests; nothing is pushed to `main`.
 - `git-account.md`: this project's remote, commit identity and `gh` account.
-- `majlis.md`: which files come from the Majlis template, and how they update.
+- `majles.md`: which files come from the Majles template, and how they update.
 - `beads.md`: the work queue: only the main session writes to it; every
   agent's report ends with the `bd` commands it needs.
 

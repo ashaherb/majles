@@ -8,7 +8,7 @@ holds architecture decisions only. Choices made from research live in
 threshold is in `.claude/rules/decisions.md`: a decision belongs here when it is
 expensive to reverse *and* later work builds on it. The stack, the data store,
 the content model, hosting, auth, the i18n architecture if there is one. Expect a handful per
-slice; `majlis lint` flags more than five. What the user sees, hears or can do is
+slice; `majles lint` flags more than five. What the user sees, hears or can do is
 not architecture: it goes in a spec in `docs/specs/`, which can change.
 
 A fix found by review is never an ADR. It goes in the commit message. If the
@@ -73,5 +73,5 @@ An ADR without a `Research:` line is a blocking finding for the critic.
 
 `Needed by:` names the slice of the phase plan in `CLAUDE.md` that first needs
 the decision (Phase 0's decisions say `slice 1`). A decision no current slice
-needs is not made yet (`.claude/rules/agents.md`). `majlis lint` checks for the
+needs is not made yet (`.claude/rules/agents.md`). `majles lint` checks for the
 `Status:`, `Research:` and `Needed by:` lines.

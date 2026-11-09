@@ -1,4 +1,4 @@
-"""Checks on the template itself.   python3 -m unittest discover -s majlis -p 'test_*.py'
+"""Checks on the template itself.   python3 -m unittest discover -s majles -p 'test_*.py'
 
 These keep the template honest as it grows: everything shipped is in the
 manifest, shared files carry no project facts, and every placeholder is
@@ -17,18 +17,18 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
-from majlis import cli as bp  # noqa: E402
+from majles import cli as bp  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 GUIDE = ROOT / "template" / "SETUP.md"  # the setup procedure, shipped once
 PLACEHOLDER = re.compile(r"\{\{([A-Z_]+)\}\}")
 EXAMPLES = {"LIKE_THIS", "PLACEHOLDER"}  # illustrations in the setup text
-# The repo's own files, for Majlis as a public project. None reaches a project.
+# The repo's own files, for Majles as a public project. None reaches a project.
 # The project's CLAUDE.md and README.md ship from template/.
 REPO_LEVEL = {"README.md", "CLAUDE.md", "DECISIONS.md", "LICENSE", "CHANGELOG.md",
               "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SECURITY.md", "pyproject.toml",
               "setup.py", ".github/FUNDING.yml", ".github/ISSUE_TEMPLATE/config.yml"}
-NOT_SHIPPED = {"MAINTAINING.md"} | REPO_LEVEL  # plus everything under majlis/
+NOT_SHIPPED = {"MAINTAINING.md"} | REPO_LEVEL  # plus everything under majles/
 NOT_SHIPPED_DIRS = (".github", "build", "dist")  # the last two are git-ignored output
 PRODUCT_WORDS = re.compile(r"\b(zad|skills?|catalog|curator|arabic)\b", re.I)
 # Places where a product word is a deliberate example, not a leak.
@@ -41,7 +41,7 @@ ENTRIES = bp.parse_manifest((ROOT / bp.MANIFEST).read_text(encoding="utf-8"))
 def repo_files():
     for p in ROOT.rglob("*"):
         rel = p.relative_to(ROOT)
-        if p.is_file() and rel.parts[0] not in (".git", "majlis") and "__pycache__" not in rel.parts \
+        if p.is_file() and rel.parts[0] not in (".git", "majles") and "__pycache__" not in rel.parts \
                 and p.name != ".DS_Store":
             yield rel.as_posix()
 
@@ -141,24 +141,25 @@ class Neutrality(unittest.TestCase):
         self.assertFalse(hits, "product-specific words in shipped files:\n" + "\n".join(hits))
 
 
-# Words from the one machine Majlis was first built on. None may appear in a
+# Words from the one machine Majles was first built on. None may appear in a
 # shipped file, or anywhere in the repo outside the compatibility code and tests.
 # The words are split so this file does not match itself.
 BLOCKLIST = re.compile("|".join(re.escape(w) for w in (
     "/Us" + "ers/", "/ho" + "me/", "~/" + "Personal", "asha" + "herb", "a-bat" + "tal",
     "mo" + "zn", "github.com-" + "personal", "project-" + "boilerplate", "bp" + ".py",
     "daf" + "tar", "skills-" + "marketplace", "kids-" + "rts", "ai-for-" + "kids",
-    "game-" + "studio", "majlis-" + "hq", "majlis-" + "media", "media" + "kit")), re.I)
+    "game-" + "studio", "majles-" + "hq", "majles-" + "media", "media" + "kit")), re.I)
 # The old name may stay only where it is needed to read projects made before the rename.
-OLD_NAME = re.compile("boiler" + "plate", re.I)
-COMPATIBILITY = {"majlis/cli.py", "majlis/test_cli.py", "majlis/test_template.py"}
+OLD_NAME = re.compile("boiler" + "plate|maj" + "lis", re.I)  # the two earlier names
+COMPATIBILITY = {"majles/cli.py", "majles/test_cli.py", "majles/test_template.py"}
 # Repo-level files that name the maintainer's account on purpose: the sponsor link,
 # the author line, the conduct contact and the package URLs. Exempt by name only.
 # The issue chooser links to the repo's private security advisories.
 NAMES_THE_MAINTAINER = {".github/FUNDING.yml", ".github/ISSUE_TEMPLATE/config.yml", "README.md",
                         "CODE_OF_CONDUCT.md", "pyproject.toml"}
-# The standard Apache 2.0 text has the phrase "boilerplate notice".
-SAYS_THE_OLD_NAME = {"LICENSE"}
+# The standard Apache 2.0 text has the phrase "boilerplate notice"; the changelog and the
+# decision log name the earlier names on purpose, to say what was renamed.
+SAYS_THE_OLD_NAME = {"LICENSE", "CHANGELOG.md", "DECISIONS.md"}
 
 
 def all_repo_files():
@@ -183,9 +184,9 @@ class Portability(unittest.TestCase):
         for sample in ("/Us" "ers/me/x", "/ho" "me/me/x", "~/" "Personal/x", "asha" "herb",
                        "github.com-" "personal", "project-" "boilerplate", "boilerplate/bp" ".py",
                        "ai-for-" "kids", "kids-" "rts", "game-" "studio", "daf" "tar",
-                       "majlis-" "hq", "majlis-" "media"):
+                       "majles-" "hq", "majles-" "media"):
             self.assertTrue(BLOCKLIST.search(sample), sample)
-        self.assertFalse(BLOCKLIST.search("majlis new my-idea"))
+        self.assertFalse(BLOCKLIST.search("majles new my-idea"))
 
     def test_the_exempt_files_are_never_shipped(self):
         # An exemption covers the repo's own copy only. A shipped file is always checked in full.
@@ -280,14 +281,14 @@ class MainGuard(unittest.TestCase):
 
 
     def test_unchanged_template_files_do_not_count(self):
-        # A first adoption: 1,200 lines of template files, recorded in .majlis.json as installed.
+        # A first adoption: 1,200 lines of template files, recorded in .majles.json as installed.
         body = "".join(f"{i}\n" for i in range(1200))
         lock = {"files": {".claude/rules/big.md": hashlib.sha256(body.encode()).hexdigest()}}
-        (self.repo / ".majlis.json").write_text(json.dumps(lock))
+        (self.repo / ".majles.json").write_text(json.dumps(lock))
         self.assertNotIn("warning", self.branch_push("adopt", ".claude/rules/big.md", 1200)[1])
 
     def test_an_edited_template_file_counts(self):
-        (self.repo / ".majlis.json").write_text(json.dumps({"files": {".claude/rules/big.md": "0" * 64}}))
+        (self.repo / ".majles.json").write_text(json.dumps({"files": {".claude/rules/big.md": "0" * 64}}))
         self.assertIn("warning", self.branch_push("edited", ".claude/rules/big.md", 1200)[1])
 
 
@@ -296,8 +297,8 @@ class Settings(unittest.TestCase):
         settings = json.loads(text(".claude/settings.json"))
         self.assertEqual(settings["fallbackModel"], ["opus"])
         command = settings["hooks"]["SessionStart"][0]["hooks"][0]["command"]
-        self.assertIn("command -v majlis", command)
-        self.assertIn("majlis check", command)
+        self.assertIn("command -v majles", command)
+        self.assertIn("majles check", command)
         self.assertIn(" check ", command)
         self.assertTrue(command.rstrip().endswith("exit 0"), "the hook must never fail a session")
 

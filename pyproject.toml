@@ -3,7 +3,7 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "majlis"
+name = "majles"
 dynamic = ["version"]
 description = "An agent team and working rules for Claude Code projects, and the CLI that keeps them in step."
 readme = "README.md"
@@ -23,17 +23,17 @@ classifiers = [
 dependencies = []
 
 [project.scripts]
-majlis = "majlis.cli:main"
+majles = "majles.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/ashaherb/majlis"
-Repository = "https://github.com/ashaherb/majlis"
-Issues = "https://github.com/ashaherb/majlis/issues"
-Changelog = "https://github.com/ashaherb/majlis/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/ashaherb/majles"
+Repository = "https://github.com/ashaherb/majles"
+Issues = "https://github.com/ashaherb/majles/issues"
+Changelog = "https://github.com/ashaherb/majles/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
-packages = ["majlis"]
+packages = ["majles"]
 include-package-data = false
 
 [tool.setuptools.dynamic]
-version = { attr = "majlis.__version__" }
+version = { attr = "majles.__version__" }

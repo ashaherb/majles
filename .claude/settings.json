@@ -14,7 +14,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "command -v majlis >/dev/null 2>&1 && majlis check \"$CLAUDE_PROJECT_DIR\" 2>/dev/null; exit 0",
+            "command": "command -v majles >/dev/null 2>&1 && majles check \"$CLAUDE_PROJECT_DIR\" 2>/dev/null; exit 0",
             "timeout": 10
           }
         ]

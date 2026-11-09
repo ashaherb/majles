@@ -1,5 +1,5 @@
 name: Idea
-description: A new agent, rule, module, or change to how Majlis works.
+description: A new agent, rule, module, or change to how Majles works.
 labels: [idea]
 body:
   - type: textarea

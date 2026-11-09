@@ -1,7 +1,7 @@
 """Packages the template with the CLI. The metadata is in pyproject.toml.
 
-majlis/manifest.txt is the single list of shipped files. The build copies each
-file it names into the wheel under majlis/template/, at the same relative path,
+majles/manifest.txt is the single list of shipped files. The build copies each
+file it names into the wheel under majles/template/, at the same relative path,
 and the source distribution includes the same files, so a wheel built from the
 sdist has them too.
 """
@@ -14,7 +14,7 @@ from setuptools.command.build_py import build_py
 from setuptools.command.sdist import sdist
 
 HERE = pathlib.Path(__file__).resolve().parent
-MANIFEST = "majlis/manifest.txt"
+MANIFEST = "majles/manifest.txt"
 
 
 def template_files():
@@ -41,7 +41,7 @@ class BuildWithTemplate(build_py):
 
     def run(self):
         super().run()
-        out = pathlib.Path(self.build_lib) / "majlis" / "template"
+        out = pathlib.Path(self.build_lib) / "majles" / "template"
         for rel in template_files():
             dest = out / rel
             dest.parent.mkdir(parents=True, exist_ok=True)

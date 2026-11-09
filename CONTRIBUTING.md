@@ -1,13 +1,13 @@
-# Contributing to Majlis
+# Contributing to Majles
 
-Thank you for wanting to help. Majlis is small and run by one maintainer, so
+Thank you for wanting to help. Majles is small and run by one maintainer, so
 the most useful contributions are clear bug reports, and pull requests that
 change one thing and say why.
 
 ## Before you start
 
 Open an issue first for anything bigger than a fix: a new agent, a new rule, a
-new module, or a change to how `sync` behaves. Every project made with Majlis
+new module, or a change to how `sync` behaves. Every project made with Majles
 receives the shared files at its next sync, so a change there reaches people
 who never asked for it. It is worth agreeing on first.
 
@@ -23,8 +23,8 @@ that reverses a recorded decision needs to say so and argue for it.
   touched again: `template/CLAUDE.md`, `template/README.md`,
   `.claude/settings.json`, `.claude/rules/constraints.md` and a few more.
 - **Modules** are in `optional/`.
-- `majlis/manifest.txt` lists every shipped file as `shared` or `once`, by
-  module. `majlis/cli.py` is the command-line tool.
+- `majles/manifest.txt` lists every shipped file as `shared` or `once`, by
+  module. `majles/cli.py` is the command-line tool.
 
 Three rules keep the template usable by anyone:
 
@@ -34,22 +34,22 @@ Three rules keep the template usable by anyone:
    it no longer applies.
 3. A new shipped file goes in the manifest, under the right module.
 
-`majlis/test_template.py` checks all three.
+`majles/test_template.py` checks all three.
 
 ## Making a change
 
 ```bash
-git clone <your fork> && cd majlis
+git clone <your fork> && cd majles
 git config core.hooksPath .githooks     # refuses pushes to main
 git checkout -b short-name-for-the-change
 # edit, then run the tests (Python 3.10 or later, standard library only):
-python3 -m unittest discover -s majlis -p 'test_*.py'
+python3 -m unittest discover -s majles -p 'test_*.py'
 python3 -m unittest tools/test_render_decisions.py tools/test_render_status.py
 ```
 
 - One change per pull request, under about 1,000 added lines.
 - Add a test for anything the CLI does differently.
-- Majlis uses only the Python standard library. Please keep it that way.
+- Majles uses only the Python standard library. Please keep it that way.
 - Commit subjects are imperative and lowercase, under about 70 characters, with
   no trailing period: `add a dry run to adopt`.
 - Open the pull request as a draft, and mark it ready when it is done. CI runs
@@ -60,7 +60,7 @@ python3 -m unittest tools/test_render_decisions.py tools/test_render_status.py
 
 ## Licence
 
-Majlis is Apache 2.0. By opening a pull request you agree that your
+Majles is Apache 2.0. By opening a pull request you agree that your
 contribution is licensed under it too (section 5 of `LICENSE`). There is no
 separate contributor agreement.
 

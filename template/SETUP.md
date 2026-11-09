@@ -1,6 +1,6 @@
 # Setting up this project
 
-This is Claude's procedure for setting up a project made or adopted with Majlis.
+This is Claude's procedure for setting up a project made or adopted with Majles.
 Follow it in order. The last step deletes this file.
 
 ## 1. Interview
@@ -14,7 +14,7 @@ description already says.
 |---|---|---|
 | 1 | What is it, in a paragraph? | `ONE_PARAGRAPH_DESCRIPTION` |
 | 2 | What is it called, and is the name settled? | `PROJECT_NAME`, `NAME_STATUS`, and the name rule in `constraints.md` |
-| 3 | Directory and repo name? Default: the slug given to `majlis new` | `REPO_SLUG` |
+| 3 | Directory and repo name? Default: the slug given to `majles new` | `REPO_SLUG` |
 | 4 | The one-line thesis: why it should exist, and what it refuses to be? | `THESIS` |
 | 5 | Who is it for? What do they know, how do they arrive, how long do they give it? | `WHO_IT_IS_FOR` |
 | 6 | What must never be compromised? | `NON_NEGOTIABLES`, each marked as the developer's words or drafted |
@@ -48,10 +48,10 @@ at a time beyond the first batch.
 Placeholders look like `{{LIKE_THIS}}`. List them with:
 
 ```bash
-majlis placeholders
+majles placeholders
 ```
 
-It reads only the files the project owns (the "once" list in `.majlis.json`), never
+It reads only the files the project owns (the "once" list in `.majles.json`), never
 footage, generated files or anything else in the repo.
 
 They appear only in files the project owns: `CLAUDE.md`, `README.md`,
@@ -73,21 +73,21 @@ is on. Never put project facts in a shared file. Sync would overwrite them.
 ## 3. Modules
 
 ```bash
-majlis enable i18n      # more than one language, or any right-to-left one
-majlis enable content   # the content is the product; adds the editor and content/README.md
-majlis disable ui       # no visual interface: removes the designer and design/
-majlis enable ai        # calls a model at runtime: adds the ai agent, its rule,
+majles enable i18n      # more than one language, or any right-to-left one
+majles enable content   # the content is the product; adds the editor and content/README.md
+majles disable ui       # no visual interface: removes the designer and design/
+majles enable ai        # calls a model at runtime: adds the ai agent, its rule,
                        # and evals/README.md
-majlis enable legal     # minors, payments, health or financial data, or a
+majles enable legal     # minors, payments, health or financial data, or a
                        # regulated client: adds the legal agent and docs/legal/
-majlis disable beads    # no shared work queue: removes .claude/rules/beads.md.
+majles disable beads    # no shared work queue: removes .claude/rules/beads.md.
                        # On by default; set it up in step 4b
 ```
 
 After `enable i18n` or `enable ai`, add `i18n.md` or `ai.md` to the rules list
 in `CLAUDE.md`; after `disable beads`, remove `beads.md` from it. If the
 content role has a better name in this domain (a marketplace of templates
-might call it "curator"), leave `editor.md` alone. Instead, `majlis detach
+might call it "curator"), leave `editor.md` alone. Instead, `majles detach
 .claude/agents/editor.md`, then rename the file and its `name:` field.
 
 ## 4. Repo
@@ -105,7 +105,7 @@ might call it "curator"), leave `editor.md` alone. Instead, `majlis detach
    unless the developer says otherwise).
 5. Turn on the guard that keeps `main` for merged pull requests:
    `git config core.hooksPath .githooks`. Every later clone needs it too;
-   `majlis lint` reports one that does not.
+   `majles lint` reports one that does not.
 
 ## 4b. The work queue (beads module, on by default)
 
@@ -173,9 +173,9 @@ python3 -m unittest tools/test_render_decisions.py tools/test_render_status.py
 
 1. Delete the setup block at the top of `CLAUDE.md`, the template line under the
    heading in `README.md`, and this file, `SETUP.md`.
-2. Run `majlis placeholders`. It must find none. From now on `majlis lint` reports
+2. Run `majles placeholders`. It must find none. From now on `majles lint` reports
    any placeholder left in the project's own files.
-3. Make one commit, "initial commit from majlis", including `.majlis.json`,
+3. Make one commit, "initial commit from majles", including `.majles.json`,
    and push it. This is the one push to `main` there will
    ever be, before a pull request can exist:
    `ALLOW_MAIN_PUSH=1 git push -u origin main`. Everything after goes through a

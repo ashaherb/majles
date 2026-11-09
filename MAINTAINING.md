@@ -130,6 +130,11 @@ project-specific out of those files and into ones the project owns
 (`CLAUDE.md`, `constraints.md`, `content/README.md`), or it is lost. The project
 is a git repo, so `git diff` shows exactly what adoption changed.
 
+A project's own `CLAUDE.md` is kept, and the template goes beside it as
+`CLAUDE.majles.md`; setup merges the two (`SETUP.md`, "An adopted project").
+For a kept `.gitignore` and `README.md`, adopt lists the template's patterns and
+sections each one lacks. Then say "set up this project from SETUP.md" in Claude.
+
 ## What setup does
 
 The setup procedure ships with every project as `SETUP.md` (its source is

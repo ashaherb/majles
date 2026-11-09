@@ -129,6 +129,22 @@ class Placeholders(unittest.TestCase):
         self.assertFalse(missing, f"undocumented placeholders: {missing}")
 
 
+class SetupGuide(unittest.TestCase):
+    def section(self, heading):
+        guide = text("template/SETUP.md")
+        return guide.split(f"\n## {heading}\n", 1)[1].split("\n## ", 1)[0]
+
+    def test_it_names_the_file_adopt_writes_beside_claude_md(self):
+        # Issue #4: setup merges the template adopt wrote beside the project's CLAUDE.md.
+        self.assertIn(f"`{bp.CLAUDE_BESIDE}`", text("template/SETUP.md"))
+
+    def test_an_adopted_project_skips_creating_the_repo(self):
+        # Issue #6: an adopted project already has a repo, a remote and a main branch.
+        repo = self.section("4. Repo")
+        self.assertIn("An existing repo", repo.split("1. `git init", 1)[0])
+        self.assertIn("An adopted project", self.section("6. Finish"))
+
+
 class Neutrality(unittest.TestCase):
     def test_shipped_files_name_no_particular_product(self):
         hits = []

@@ -110,3 +110,18 @@ under the same ready-pull-request trigger as the tests.
 **Consequence:** the check cannot catch a PyPI-side problem (metadata rendering, a
 name clash). After the first release, one manual `pipx install majles` on a clean
 machine covers that.
+
+## 8. Adopt writes the template CLAUDE.md beside the project's own
+
+Problem. `adopt` kept an existing `CLAUDE.md`, as it keeps every file a project owns,
+so the template's setup block and sections never arrived and setup had nothing to fill
+(issue #4).
+
+Choice. The template goes beside it as `CLAUDE.majles.md`, and setup's first step
+merges the two into `CLAUDE.md` and deletes the extra file. Replacing `CLAUDE.md` and
+moving the old one aside was the alternative: the setup block would load at once, but
+the project's own instructions would stop loading until setup ran.
+
+**Consequence:** adopt still never overwrites a file the project owns. The setup
+block does not load in an adopted project until the merge, so adopt ends by telling
+the user to start setup from `SETUP.md`.

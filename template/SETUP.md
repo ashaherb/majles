@@ -3,6 +3,19 @@
 This is Claude's procedure for setting up a project made or adopted with Majles.
 Follow it in order. The last step deletes this file.
 
+**An adopted project** (brought in with `majles adopt`, not made with
+`majles new`) already has its own files and history. Three things differ:
+
+- If adopt kept the project's own `CLAUDE.md`, the template is beside it as
+  `CLAUDE.majles.md`. Before step 1, make that the new `CLAUDE.md`: carry
+  everything the old one says that still holds into its sections (what fits
+  none goes under a heading of its own), keep its setup block, and delete
+  `CLAUDE.majles.md`. The old `CLAUDE.md` is the interview's first source.
+  Add the lines adopt listed as missing from `.gitignore` and `README.md`,
+  where they apply.
+- Step 4 is shorter: the repo already exists.
+- Step 6's commit goes on a branch and a pull request, never straight to `main`.
+
 ## 1. Interview
 
 From the developer's description, fill as many of the answers below as can be
@@ -92,6 +105,11 @@ might call it "curator"), leave `editor.md` alone. Instead, `majles detach
 
 ## 4. Repo
 
+**An existing repo** (an adopted project, where `git remote get-url origin`
+prints a URL): skip 1 to 3. Check that `git config user.email` is the address
+the developer commits with, then do 4 and 5, with `GIT_REMOTE` taken from the
+existing `origin`.
+
 1. `git init -b main`, and set `git config user.email` to the address the
    developer commits with.
 2. Check `gh auth status`, and that the active account is the one that should
@@ -179,7 +197,9 @@ python3 -m unittest tools/test_render_decisions.py tools/test_render_status.py
    and push it. This is the one push to `main` there will
    ever be, before a pull request can exist:
    `ALLOW_MAIN_PUSH=1 git push -u origin main`. Everything after goes through a
-   branch and a pull request (`.claude/rules/git.md`).
+   branch and a pull request (`.claude/rules/git.md`). An adopted project
+   already has `main`, so its commit goes on a branch, such as `adopt-majles`,
+   and reaches `main` through a pull request like any other change.
 4. Tell the developer to start a new session so the agents, rules and hook
    load, and that Phase 0 starts with "run the architect on the Phase 0 brief
    in CLAUDE.md".

@@ -78,6 +78,14 @@ RETIRED = {"studio": (".claude/agents/studio.md", ".claude/rules/studio.md")}
 HOOK_COMMAND = 'command -v majles >/dev/null 2>&1 && majles check "$CLAUDE_PROJECT_DIR" 2>/dev/null; exit 0'
 DEFAULT_MODULES = ["core", "ui", "beads"]
 SELF = "majles"
+# Where adopt writes the template CLAUDE.md when the project already has its own. Setup
+# merges the two (SETUP.md, "An adopted project") and deletes this file.
+CLAUDE_BESIDE = "CLAUDE.majles.md"
+# Project-owned files adopt keeps, and which template lines it reports their copy lacks.
+COMPARED = {
+    ".gitignore": lambda line: line and not line.startswith("#"),  # every pattern
+    "README.md": lambda line: line.startswith("## ") and "{{" not in line,  # the sections
+}
 ROOT_ENV = "MAJLES_ROOT"
 LEGACY_ROOT_ENV = "MAJLIS_ROOT"  # still read when the new one is not set
 
@@ -393,7 +401,9 @@ def cmd_adopt(bp, project, modules, apply, show_diff):
     Every shared file is set to the Majles version: added where missing,
     replaced where it differs. The dry run lists each replacement, so anything
     project-specific in those files can be moved to a project-owned file first.
-    Once files are never overwritten; a missing one is added as a template."""
+    Once files are never overwritten; a missing one is added as a template. A kept
+    CLAUDE.md gets the template beside it, for setup to merge, and a kept .gitignore
+    or README.md is listed with the template lines it lacks."""
     if has_lock(project):
         raise MajlesError(f"{project} already has {lock_path(project).name}; use sync")
     if "core" not in modules:
@@ -414,10 +424,16 @@ def cmd_adopt(bp, project, modules, apply, show_diff):
         data, p = source.read(ref, src), project / dest
         if kind == "once":
             lock["once"].append(dest)
-            if p.exists():
-                print(f"  keep    {dest}  (project-owned)")
-            else:
+            if not p.exists():
                 plan.append(("add-template", dest, data))
+            elif dest == "CLAUDE.md" and p.read_bytes() != data:
+                print(f"  keep    {dest}  (project-owned; the template goes beside it as "
+                      f"{CLAUDE_BESIDE}, and setup merges the two)")
+                plan.append(("add", CLAUDE_BESIDE, data))
+            else:
+                print(f"  keep    {dest}  (project-owned)")
+                for line in lacking(dest, p.read_bytes(), data):
+                    print(f"          lacks: {line}")
             continue
         lock["files"][dest] = digest(data)
         if not p.exists():
@@ -436,7 +452,19 @@ def cmd_adopt(bp, project, modules, apply, show_diff):
     save_lock(project, lock)
     print(f"  adopted. Review with `git diff`, then: "
           f"git add -A && git commit -m \"adopt majles @{source.label(ref)}\"")
+    print("  Next: in Claude, say \"set up this project from SETUP.md\".")
     return 0
+
+
+def lacking(dest, ours, template):
+    """The lines of the template `dest` that the project's own copy does not have, for the
+    files in COMPARED: .gitignore patterns and README.md section headings. Others: none."""
+    counts = COMPARED.get(dest)
+    if counts is None:
+        return []
+    have = {line.strip() for line in ours.decode("utf-8", errors="replace").splitlines()}
+    lines = (line.strip() for line in template.decode("utf-8", errors="replace").splitlines())
+    return [line for line in lines if counts(line) and line not in have]
 
 
 def plan_sync(bp, project, lock, commit, take=()):

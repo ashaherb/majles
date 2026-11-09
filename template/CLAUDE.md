@@ -11,7 +11,7 @@ up yet. Before any other work, follow `SETUP.md` in this project. In short:
 1. Get the project description from the developer.
 2. Fill every `{{PLACEHOLDER}}` you can derive. Ask for the rest in one batch.
 3. Turn modules on or off with `majles`.
-4. Create the repo.
+4. Create the repo, unless the project was adopted and has one.
 5. Publish the decision log.
 6. Delete this section, the template line in `README.md`, and `SETUP.md`.
 <!-- /SETUP -->

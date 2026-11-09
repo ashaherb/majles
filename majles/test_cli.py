@@ -538,6 +538,46 @@ class Adopt(Base):
         self.project = p
         self.assertIn("up to date", self.sync()[1])
 
+    def test_a_kept_claude_md_gets_the_template_beside_it(self):
+        # Issue #4: setup needs the template's sections, but the project's own file stays.
+        p = self.existing()
+        code, out = quiet(bp.cmd_adopt, self.bp, p, ["core"], False, False)
+        self.assertIn(bp.CLAUDE_BESIDE, out)
+        self.assertFalse((p / bp.CLAUDE_BESIDE).exists())  # the dry run writes nothing
+        quiet(bp.cmd_adopt, self.bp, p, ["core"], True, False)
+        self.assertEqual((p / "CLAUDE.md").read_text(), "# Ours, filled in\n")
+        self.assertEqual((p / bp.CLAUDE_BESIDE).read_text(), "# {{PROJECT_NAME}}\n")
+        self.assertNotIn(bp.CLAUDE_BESIDE, json.dumps(self.lock_of(p)))  # setup deletes it
+
+    def test_a_claude_md_equal_to_the_template_needs_nothing_beside_it(self):
+        p = self.existing()
+        (p / "CLAUDE.md").write_text("# {{PROJECT_NAME}}\n")
+        quiet(bp.cmd_adopt, self.bp, p, ["core"], True, False)
+        self.assertFalse((p / bp.CLAUDE_BESIDE).exists())
+
+    def test_lists_template_lines_a_kept_gitignore_and_readme_lack(self):
+        # Issue #5: the project keeps its own copies, and is told what they are missing.
+        self.put("majles/manifest.txt", MANIFEST.replace(
+            "once   CLAUDE.md", "once   CLAUDE.md\nonce   .gitignore\nonce   README.md"), commit=False)
+        self.put(".gitignore", "# Secrets\n.env\n\ndocs/status/screens/\n", commit=False)
+        self.put("README.md", "# {{PROJECT_NAME}}\n\n## How to run it\n\n## How to test it\n", commit=False)
+        self.commit("owned files")
+        p = self.existing()
+        (p / ".gitignore").write_text(".env\n")
+        (p / "README.md").write_text("# Ours\n\n## How to run it\nmake run\n")
+        code, out = quiet(bp.cmd_adopt, self.bp, p, ["core"], False, False)
+        self.assertIn("lacks: docs/status/screens/", out)
+        self.assertIn("lacks: ## How to test it", out)
+        for not_missing in ("lacks: .env", "lacks: ## How to run it", "lacks: # Secrets", "PROJECT_NAME}"):
+            self.assertNotIn(not_missing, out)
+
+    def test_lacking_reads_only_the_compared_files(self):
+        self.assertEqual(bp.lacking("docs/direction.md", b"", b"## A section\n"), [])
+        self.assertEqual(bp.lacking(".gitignore", b"  node_modules/\n", b"node_modules/\ndist/\n"), ["dist/"])
+
+    def lock_of(self, project):
+        return json.loads((project / bp.LOCK).read_text())
+
     def test_refuses_a_project_already_adopted(self):
         with self.assertRaises(bp.MajlesError):
             bp.cmd_adopt(self.bp, self.project, ["core"], True, False)

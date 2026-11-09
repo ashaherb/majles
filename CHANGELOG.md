@@ -25,6 +25,11 @@ reserves the name.)
   step-by-step setup procedure, and `CLAUDE.md` points at it, so setup works from the
   installed package without the Majles repository. Setup deletes it when it is done.
   `majles new` and `majles adopt` bring it; `sync` never adds it to an existing project.
+- **Adopting a project with its own `CLAUDE.md` now works.** `majles adopt` keeps the
+  project's `CLAUDE.md` and writes the template beside it as `CLAUDE.majles.md`; setup
+  merges the two and deletes it. For a kept `.gitignore` and `README.md`, adopt lists the
+  template lines each one lacks. Setup's repo step has a short path for a project that
+  already has a repo, and its first commit goes through a pull request.
 - **`majles placeholders` lists what setup still has to fill**, reading only the files
   your project owns (the "once" list in `.majles.json`), never footage or generated
   files. Once setup has deleted `SETUP.md`, `majles lint` reports any placeholder left.

@@ -21,21 +21,8 @@ the first decisions your project makes, with the team.
 
 You need Python 3.10 or later, Git, [Claude Code](https://docs.claude.com/en/docs/claude-code),
 and the GitHub CLI (`gh`), signed in. Setup uses `gh` to create a private
-GitHub repo for the project.
-
-Setup also offers a work queue with a local board. It installs what is
-missing, so nothing needs to be there first, but it helps to know what it
-uses:
-
-- **The queue, Beads (`bd`):** installed with Homebrew (`brew install beads`),
-  else with npm on Node 22 or later (`npm i -g @beads/bd`), else as the release
-  binary for your machine, downloaded with `gh` and checked against the
-  release's checksums.
-- **The board, beads-ui:** needs Node 22 or later (`npm i -g beads-ui`). With
-  no Node, setup skips the board and the queue works without it.
-
-If `bd` cannot be installed, or you do not want the queue, setup turns the
-`beads` module off and carries on. `majles enable beads` brings it back later.
+GitHub repo for the project. Setup also offers a work queue and installs what
+it needs; [The work queue](#the-work-queue) says what that is.
 
 ### 1. Install
 
@@ -100,9 +87,12 @@ Claude follows `SETUP.md`, in order:
 4. It runs `git init`, creates a private GitHub repo with `gh`, and turns on a
    git hook that refuses pushes to `main`.
 5. It sets up the work queue, unless you say no: Beads (`bd`) and its local
-   board, installing what is missing (see the prerequisites above).
-6. It renders the decision log and a status page as HTML, and publishes each
-   as an Artifact.
+   board, installing what is missing (see [The work queue](#the-work-queue)).
+6. It renders the decision log and a status page as HTML. Where your session
+   can publish claude.ai Artifacts, it publishes each as one, a private page
+   you can open on your phone. Where it cannot, it keeps them as files,
+   `docs/status/decisions.html` and `docs/status/status.html`, which git
+   ignores; open them in a browser.
 7. It deletes `SETUP.md`, makes the first commit, and pushes it. That is the
    only push straight to `main`. Everything after goes through a branch and a
    pull request.
@@ -146,6 +136,22 @@ always says what comes next.
 | The phase, the status and the next step | `CLAUDE.md` |
 
 `python3 tools/render_decisions.py <out.html>` renders them as one page.
+
+### The work queue
+
+The `beads` module gives every session and agent one shared queue of work, on
+your machine only. Setup installs what is missing, so nothing needs to be there
+first:
+
+- **The queue, Beads (`bd`):** with Homebrew (`brew install beads`), else
+  with npm on Node 22 or later (`npm i -g @beads/bd@1.3.4`), else as the 1.3.4
+  release binary for your machine, downloaded with `gh` and installed only if
+  it matches the release's checksums.
+- **The board, beads-ui:** needs Node 22 or later (`npm i -g beads-ui`). With
+  no Node, setup skips the board and the queue works without it.
+
+If `bd` cannot be installed, or you do not want the queue, setup turns the
+`beads` module off and carries on. `majles enable beads` brings it back later.
 
 ### Installing before 0.1.0
 
@@ -209,6 +215,16 @@ Majles records what each project received, and splits the files in two:
 - **Owned** files (`CLAUDE.md`, `README.md`, your settings and constraints, and
   everything you create) belong to the project. Sync never touches them.
 
+The notice compares your project with the `majles` installed on your
+machine. Majles never checks PyPI by itself, so a new release shows up only
+after you upgrade it:
+
+```bash
+pipx upgrade majles    # or: uv tool upgrade majles
+```
+
+Then, in the project:
+
 ```bash
 majles sync            # preview: what changes, with line counts
 majles sync --apply    # write it; review with git diff, commit on a branch
@@ -267,6 +283,15 @@ nothing anywhere: there is no telemetry. The heavy agents are the Opus ones and
 the 100x-engineer, which runs rarely, before a release. On a smaller plan, move
 those to Sonnet: change the agent's `model:` line, which makes that file yours
 (`majles detach`).
+
+## Secrets
+
+A project's `.claude/settings.json` denies Claude's Read tool on `.env` files,
+`*.pem` and `*.key` files and service-account JSON. A deny rule cannot stop a
+shell command, a script or a test from reading the same file. Past the Read
+tool, the guard is the rule that only your main session reads secrets, and a
+rule is an instruction, not a lock. Keep real secrets out of the project folder
+where you can.
 
 ## Contributing
 

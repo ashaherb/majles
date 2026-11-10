@@ -52,9 +52,11 @@ researcher as prior findings to confirm, not redo), starts the researchers, and
 saves each reply, **unedited**, as `findings.md`. Only the researcher searches
 the web; the critic may spot-check a claim.
 
-**Why:** Claude Code does not let a subagent write report files, so the
-researcher returns text and the main session records it: a deliberate, recorded
-exception chosen by the developer on 2026-09-28.
+**Why:** this keeps one writer for `findings.md`, and the reply is saved as
+the researcher gave it, by the one session that sees every request. Majles chose
+it because a subagent reports back as text; whether a subagent in the current
+Claude Code can write the file itself is not checked here, and the protocol does
+not depend on it.
 
 ## Late answers are kept, and the research stands
 

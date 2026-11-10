@@ -5,11 +5,41 @@ Run `majles sync` to preview it, and `majles sync --apply` to write it.
 
 ## 0.1.0: the launch release, not out yet
 
-The first release under the name Majles. (On PyPI, 0.0.1 is only a placeholder that
-reserves the name.)
+The first public release. (On PyPI, 0.0.1 is only a placeholder that reserves the name.)
 
-### What changes in your project
+### What you get
 
+- **`majles new <slug>`** makes a Claude Code project with an agent team: architect,
+  product, designer, builder, tester, critic, security, ops, researcher and a
+  100x-engineer, each with one job, on Opus or Sonnet.
+- **Working rules with their reasons**, in `.claude/rules/`: research only what blocks
+  the next step, record each decision in one place, keep pull requests reviewable, and
+  never call work done until someone has used it as the user would.
+- **A setup guide**, `SETUP.md`: say "set up this project", answer one batch of
+  questions, and Claude fills in the project, creates a private GitHub repo, turns on a
+  guard against pushes to `main`, and publishes the decision log.
+- **Modules** you turn on or off: `ui`, `beads` (a local work queue and board), `i18n`,
+  `content`, `ai` and `legal`.
+- **Staying current:** `majles sync` previews and applies template updates without
+  touching the files your project owns, and `majles lint` checks the research and ADR
+  rules.
+
+### If your project was made before 0.1.0
+
+Everything below is for a project made from an earlier, unreleased version of the
+template, under this name or an earlier one. A new project needs none of it.
+
+- **Rules no longer quote dated words as yours.** Several shared rules cited what
+  "the developer" said on a date in Majles's own history; in your project that read as
+  something you said. They now say "in an earlier project". `docs/direction.md` is
+  still the only place your words are kept.
+- **Wider read-deny rules for secrets.** New projects deny Claude's Read tool on `.env`
+  variants (not `.env.example`), `*.pem`, `*.key` and service-account JSON.
+  `.claude/settings.json` is yours, so sync does not change it: copy the `deny` list
+  from a new project if you want it. A deny rule cannot stop a shell command from
+  reading a file; `.claude/rules/agents.md` says so.
+- **Setup pins Beads to 1.3.4**, and installs the release binary only after its
+  checksum passes. This changes only `SETUP.md`, which new projects get.
 - **The tool is called Majles.** The CLI is `majles`. Install it with
   `pipx install majles` or `uv tool install majles`, and it works from any directory.
   Your project's lock file becomes `.majles.json`, and the shared rule about template

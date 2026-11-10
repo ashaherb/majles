@@ -166,8 +166,8 @@ CHANGELOG.md              what changes in a project at each release
 .claude/rules/            decisions, done, asking, tokens, code-organization,
                           ownership, research, agents, working-style, git,
                           majles (shared); constraints, git-account (template)
-.claude/settings.json     template: the fallback model, the .env read-deny, and
-                          the update-notice hook
+.claude/settings.json     template: the fallback model, the read-deny for secret
+                          files, and the update-notice hook
 docs/                     adr, specs, reviews, security, research and status, each
                           with its README; research/backlog.md and direction.md
                           (templates)
@@ -201,12 +201,25 @@ package. A tag is `v` plus that string, so the tag `v0.1.0rc1` goes on the
 commit where `majles --version` prints `majles 0.1.0rc1`. Check that before
 tagging.
 
-On launch day, the version moves from the release candidate to `0.1.0` in one
-pull request: set `__version__ = "0.1.0"`, change the `CHANGELOG.md` heading
-from "not out yet" to the date, and merge. Then, on `main`, check that
-`majles --version` prints `majles 0.1.0`, tag that commit `v0.1.0`, build the
-wheel, and upload it to PyPI. Once its `majles` is upgraded, a project made from
-`0.1.0rc1` sees the update notice at its next session, like any release.
+Until `0.1.0` is on PyPI, `pipx install majles` gets the `0.0.1` placeholder:
+pipx and uv skip a release candidate unless asked for one, so uploading
+`0.1.0rc1` would not change that. The README's status banner and its
+"Installing before 0.1.0" section say so, and stay until the upload. The upload
+and the banner's removal are one step on launch day, in this order:
+
+1. One pull request: set `__version__ = "0.1.0"`, change the `CHANGELOG.md`
+   heading from "not out yet" to the date, and delete the README's status
+   banner and its "Installing before 0.1.0" section. `test_template.py` fails
+   if the banner and the version disagree, so neither can go in alone.
+2. Merge it. On `main`, check that `majles --version` prints `majles 0.1.0`,
+   tag that commit `v0.1.0`, build the wheel, and upload it to PyPI, at once,
+   so `main` never says more than PyPI holds for longer than the upload takes.
+3. On a clean machine, `pipx install majles` and `majles --version` print
+   `majles 0.1.0`. If the upload failed, revert the pull request before
+   anything else; the banner comes back with it.
+
+Once its `majles` is upgraded, a project made from `0.1.0rc1` sees the update
+notice at its next session, like any release.
 
 Keep every shared file product-neutral and free of placeholders. A fact about a
 specific product belongs in a file the project owns. A behaviour only some
@@ -225,4 +238,7 @@ python3 -m unittest tools/test_render_decisions.py tools/test_render_status.py
 - a file is missing from the manifest;
 - a shared file contains a placeholder;
 - a placeholder is not documented in this guide;
-- a product-specific word appears in a shipped file.
+- a product-specific word appears in a shipped file;
+- a personal path or account, or a private name, appears anywhere outside the
+  compatibility code. Private names are listed only by digest, so the public
+  test does not name them; its comment says how to add one.

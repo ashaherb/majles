@@ -31,9 +31,9 @@ can exist: `ALLOW_MAIN_PUSH=1 git push -u origin main`.
 and lockfiles, so a person can review it. The main session splits a unit of
 work before it starts (for example new screens, their design previews, and the
 deletion of the old ones go in separate pull requests). `.githooks/pre-push`
-warns when a branch is over; it does not refuse the push. **Why:** one pull
-request at +11,973 −12,839 lines could not be reviewed (the developer,
-2026-10-27).
+warns when a branch is over; it does not refuse the push. **Why:** in an
+earlier project, one pull request at +11,973 −12,839 lines could not be
+reviewed.
 
 Parallel agents each work in their own git worktree, on their own branch (the
 `Agent` tool's `isolation: "worktree"`). The main session merges their branches

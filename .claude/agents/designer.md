@@ -49,7 +49,7 @@ theme, and said whether it meets the design and would delight the person in
 not in the abstract. Stop any server you started, and report in under 300
 words.
 
-**Why:** in an earlier project no agent looked at the rendered screens. The
+**Why:** in an earlier project no agent looked at the rendered screens. Its
 developer judged the product plain and its character poorly drawn, and later
 found clipped text, wrong pictures and broken layouts one screen at a time,
 because each defect had been patched on its own.

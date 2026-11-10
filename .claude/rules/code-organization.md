@@ -31,7 +31,7 @@ One formatter, run in the gate. Nobody formats by hand against it.
 A change that makes a module's `README.md` or the manual wrong fixes it in the
 same commit.
 
-**Why:** in an earlier project the developer could not find their way around the
+**Why:** in an earlier project its developer could not find their way around the
 code: no formatter, hundreds of lines over 160 characters, a flat components
 folder, each feature spread across four folders, and no code documentation.
 Code the developer cannot read, the developer cannot fix.

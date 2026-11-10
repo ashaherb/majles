@@ -38,7 +38,7 @@ exit test (one observable check), and the decisions and research it needs. The
 **Next:** line in `CLAUDE.md` points at the current slice.
 
 **Why:** in an earlier project the registry, the operator pages, tracing and
-many review loops came before one screen felt good to its user, and the
+many review loops came before one screen felt good to its user, and its
 developer judged the result rigid and plain.
 
 ## Every decision names when it is needed
@@ -75,8 +75,11 @@ one's fixes, and the loop never had a reason to stop.
 ## Only the main session spends money or reads secrets
 
 No agent but the main session reads `.env` files or other secrets, or runs a
-command that costs money (a paid model call, a paid API, a deploy). An agent
+command that costs money (a paid model or API call, a deploy). An agent
 that needs one says so in its report, and the main session runs it.
+
+The deny rules in `.claude/settings.json` stop the Read tool, not a
+shell command. This rule is the guard.
 
 **Why:** in an earlier project an agent loaded the repo's `.env` and ran a paid
 test after being told not to.
@@ -87,8 +90,8 @@ Architect, product, designer, critic, security, editor, ai, the builder and
 the 100x-engineer run on Opus: they judge, decide, or write what the product
 is. The researcher, legal, tester and ops run on Sonnet: they gather evidence
 within a set depth, draft for counsel, or carry out what specs, ADRs and
-runbooks already say. No agent needs a model beyond those two; to run one on
-another, such as Fable, `majles detach` its file and change its `model:`.
+runbooks already say. To run an agent on another model, such as Fable,
+`majles detach` its file and edit `model:`.
 `.claude/settings.json` sets a session-wide `fallbackModel` of Opus, which
 triggers only when a model is overloaded or unavailable, **not on rate limits**.
 

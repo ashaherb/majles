@@ -26,11 +26,10 @@ evidence record (below). The commit message names the record's entry.
 
 **Why:** a model's behaviour cannot be read from a diff, so the run is the
 only evidence of what a change did. Committing every run's output made one
-pull request +11,000 lines and unreviewable. The developer, 2026-10-27: "The
-test should be repeatable so the results shouldn't be kept in git only how to
-reach it"; and 2026-10-28: "the evidence (The reason why you chose the model,
-the result of the eval) should be in the platform in order to inform the
-agent about repeatability". A few lines per decision keep the reasoning in
+pull request +11,000 lines and unreviewable, in an earlier project. Its
+developer, who maintains Majles, asked for a repeatable test whose results
+live in the eval platform, with git holding only how to reach them and the
+reason each model was chosen. A few lines per decision keep the reasoning in
 the repo even if the tool's data is lost.
 
 ## The bar is written before the run

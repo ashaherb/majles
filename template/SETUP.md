@@ -135,24 +135,35 @@ First see what is already there: `command -v bd bdui`, `node --version`,
 `command -v brew`. Install only what is missing, and stop at the first way that
 works.
 
-`bd`, the queue:
+`bd`, the queue, pinned to version 1.3.4, a tested release. Never install
+1.2.1: it was published by accident, and migrates the database so that other
+versions refuse it.
 
-- with Homebrew (macOS or Linux): `brew install beads`;
-- with Node 22 or later: `npm i -g @beads/bd`;
+- with Homebrew (macOS or Linux): `brew install beads`. Homebrew installs its
+  own current version, not the pin; check `bd version` afterwards, and if it
+  prints 1.2.1, uninstall it and use another way;
+- with Node 22 or later: `npm i -g @beads/bd@1.3.4`;
 - otherwise, the release binary for this machine, checked against the
-  release's checksums. This needs `gh`, which step 4 uses anyway:
+  release's checksums. This needs `gh`, which step 4 uses anyway. Each line
+  runs only if the one before it worked, so a checksum mismatch installs
+  nothing:
 
   ```bash
+  v=1.3.4
   os=$(uname -s | tr A-Z a-z); arch=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')
-  tmp=$(mktemp -d) && cd "$tmp"
-  gh release download -R gastownhall/beads -p "beads_*_${os}_${arch}.tar.gz" -p checksums.txt
-  shasum -a 256 -c --ignore-missing checksums.txt   # must print OK; on Linux sha256sum works too
-  tar xzf beads_*.tar.gz bd && mkdir -p ~/.local/bin && mv bd ~/.local/bin/
+  tmp=$(mktemp -d) && cd "$tmp" &&
+    gh release download "v$v" -R gastownhall/beads -p "beads_${v}_${os}_${arch}.tar.gz" -p checksums.txt &&
+    shasum -a 256 -c --ignore-missing checksums.txt &&
+    tar xzf "beads_${v}_${os}_${arch}.tar.gz" ./bd &&
+    mkdir -p ~/.local/bin && mv bd ~/.local/bin/
   cd - && rm -rf "$tmp"
   ```
 
-  If `~/.local/bin` is not on `PATH`, tell the developer which line to add to
-  their shell profile.
+  The checksum line must print `OK` (on Linux without `shasum`, use
+  `sha256sum -c --ignore-missing checksums.txt` in its place). If it prints
+  `FAILED`, or any line fails, nothing was installed: do not look for another
+  way past it; tell the developer, and treat `bd` as not installable. If `~/.local/bin` is not on
+  `PATH`, tell the developer which line to add to their shell profile.
 
 `bdui`, the board, needs Node 22 or later: `npm i -g beads-ui`. If that fails
 with a permission error, never use `sudo`; run

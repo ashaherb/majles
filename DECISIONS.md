@@ -145,3 +145,34 @@ or `sonnet`. A user who has Fable detaches the agent and changes its `model:` li
 
 **Still open:** whether the 100x-engineer should go back to Fable once every plan
 has it.
+
+## 10. The secrets deny list names `.env` variants instead of `.env.*`
+
+Problem. The template denied Claude's Read tool only `.env` and `.env.local` (issue #45),
+and the obvious widening, `.env.*`, also denies `.env.example`. Deny rules win over allow
+rules, and the template commits `.env.example` (its `.gitignore` keeps it) for agents to
+read and edit.
+
+Choice. The list names the usual variants (`.env`, `.env.local`, `.env.*.local`,
+`.env.development`, `.env.production`, `.env.staging`, `.env.test`), plus `*.pem`, `*.key`
+and service-account JSON, each at the root and in any folder. The agents rule and the
+README say plainly that a deny rule stops only the Read tool, not a shell command.
+
+**Consequence:** a variant not on the list, such as `.env.prod`, is not denied. A test
+checks that the listed names are denied and `.env.example` is not. A project that keeps
+no `.env.example` can switch to `.env.*` in its own settings.
+
+## 11. Private names are checked by digest
+
+Problem. The neutrality test named the private projects, products and accounts it
+guards against, so the public repo listed them (issue #46).
+
+Choice. Generic patterns (home paths, the maintainer's public account) stay written out.
+Private names are kept only as the first 16 hex digits of a SHA-256 of the lowercased
+word, and every word, and every run of words joined by `.` or `-`, in each file is hashed
+and compared.
+
+**Consequence:** the test file names nothing private, and a hit reports the line, not the
+word. The digests hide the names from a reader, not from someone guessing and hashing
+candidate words. Adding a name means computing its digest (the test's comment has the
+command).

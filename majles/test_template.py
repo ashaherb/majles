@@ -5,6 +5,7 @@ manifest, shared files carry no project facts, and every placeholder is
 documented for setup.
 """
 
+import fnmatch
 import hashlib
 import json
 import os
@@ -30,7 +31,9 @@ REPO_LEVEL = {"README.md", "CLAUDE.md", "DECISIONS.md", "LICENSE", "CHANGELOG.md
               "setup.py", ".github/FUNDING.yml", ".github/ISSUE_TEMPLATE/config.yml"}
 NOT_SHIPPED = {"MAINTAINING.md"} | REPO_LEVEL  # plus everything under majles/
 NOT_SHIPPED_DIRS = (".github", "build", "dist", "majles.egg-info")  # git-ignored build output after .github
-PRODUCT_WORDS = re.compile(r"\b(zad|skills?|catalog|curator|arabic)\b", re.I)
+# Domain words that only a particular product would bring into a shared file. Neutral
+# examples, not any real product's; private names are checked by digest below.
+PRODUCT_WORDS = re.compile(r"\b(catalog|invoices?|recipes?|playlists?|arabic)\b", re.I)
 # Places where a product word is a deliberate example, not a leak.
 ALLOWED_WORDS = {"optional/i18n/.claude/rules/i18n.md",
                  "template/SETUP.md"}  # the interview names example domains
@@ -164,6 +167,45 @@ class SetupGuide(unittest.TestCase):
             self.assertIn(way, beads)
         self.assertNotIn("sudo npm", beads)
 
+    def bd_binary_block(self):
+        beads = self.section("4b. The work queue (beads module, on by default)")
+        return next(b.split("\n", 1)[1] for b in beads.split("```bash")[1:] if "gh release download" in b)
+
+    def run_bd_block(self, checksum_ok):
+        # Issue #44: the block runs for real against a stand-in gh (it writes the files it
+        # is asked for) and a stand-in shasum, so a mismatch must stop before tar and mv.
+        root = pathlib.Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root)
+        stubs, home = root / "stubs", root / "home"
+        stubs.mkdir(), home.mkdir()
+        (stubs / "gh").write_text(
+            '#!/bin/sh\necho "$@" > "$HOME/gh-args"\n'
+            'while [ $# -gt 0 ]; do if [ "$1" = -p ]; then shift; case "$1" in\n'
+            '  checksums.txt) : > checksums.txt ;;\n'
+            '  *) mkdir s && echo stub > s/bd && tar czf "$1" -C s ./bd && rm -r s ;;\n'
+            'esac; fi; shift; done\n')
+        (stubs / "shasum").write_text(f"#!/bin/sh\nexit {0 if checksum_ok else 1}\n")
+        for stub in stubs.iterdir():
+            stub.chmod(0o755)
+        block = self.bd_binary_block().split("```", 1)[0]
+        env = {**os.environ, "HOME": str(home), "PATH": f"{stubs}{os.pathsep}{os.environ['PATH']}"}
+        subprocess.run(["bash", "-c", block], cwd=root, env=env, capture_output=True, text=True)
+        return home
+
+    def test_bd_installs_only_after_its_checksum_passes(self):
+        self.assertFalse((self.run_bd_block(checksum_ok=False) / ".local/bin/bd").exists())
+        home = self.run_bd_block(checksum_ok=True)
+        self.assertTrue((home / ".local/bin/bd").is_file())
+
+    def test_bd_is_pinned_to_a_release(self):
+        home = self.run_bd_block(checksum_ok=True)
+        args = (home / "gh-args").read_text().split()
+        self.assertRegex(args[2], r"^v\d+\.\d+\.\d+$", "gh release download takes a pinned tag")
+        version = args[2][1:]
+        beads = self.section("4b. The work queue (beads module, on by default)")
+        self.assertIn(f"npm i -g @beads/bd@{version}", beads)
+        self.assertIn(f"pinned to version {version}", beads)
+
     def test_the_decision_log_falls_back_to_files_without_artifacts(self):
         # Issue #24: setup assumed every session can publish Artifacts.
         log = self.section("5. Decision log")
@@ -186,12 +228,46 @@ class Neutrality(unittest.TestCase):
 
 # Words from the one machine Majles was first built on. None may appear in a
 # shipped file, or anywhere in the repo outside the compatibility code and tests.
-# The words are split so this file does not match itself.
+# Generic path and account patterns are written out, split so this file does not
+# match itself.
 BLOCKLIST = re.compile("|".join(re.escape(w) for w in (
-    "/Us" + "ers/", "/ho" + "me/", "~/" + "Personal", "asha" + "herb", "a-bat" + "tal",
-    "mo" + "zn", "github.com-" + "personal", "project-" + "boilerplate", "bp" + ".py",
-    "daf" + "tar", "skills-" + "marketplace", "kids-" + "rts", "ai-for-" + "kids",
-    "game-" + "studio", "majles-" + "hq", "majles-" + "media", "media" + "kit")), re.I)
+    "/Us" + "ers/", "/ho" + "me/", "~/" + "Personal", "asha" + "herb")), re.I)
+# Private names (other projects, products, accounts and repos) are kept only as the
+# first 16 hex digits of the SHA-256 of the lowercased word, so this public file does
+# not name them. That hides them from a reader, not from someone guessing words and
+# hashing them. To add one: python3 -c 'import hashlib,sys;
+# print(hashlib.sha256(sys.argv[1].lower().encode()).hexdigest()[:16])' <word>
+PRIVATE_DIGESTS = frozenset((
+    "fa6b37ce6c8c55da", "57a3bd5ec8fe4e6c", "58ad7768e3dda79c", "521e394a04020307",
+    "03410778d20da2cf", "de323ff15874fcf6", "6ce3e618ee87dce1", "4bbe89d001880a72",
+    "fcc8b8f27f40bb4f", "0db15b57404158b9", "8cdb169b45db566d", "4840a07c7067788b",
+    "115facefbdc83bda", "be0171563305dae1", "38620bece05ef08f"))
+TOKEN = re.compile(r"[a-z0-9]+(?:[.-][a-z0-9]+)*")
+
+
+def digest(word):
+    return hashlib.sha256(word.lower().encode()).hexdigest()[:16]
+
+
+class PrivateName:
+    """A pattern-like matcher: search(line) is true when any word, or any run of words
+    joined by "." or "-", has a digest in the set. "a.b-c" is checked as a, b, c, a.b,
+    b-c and a.b-c."""
+
+    def __init__(self, digests):
+        self.digests = digests
+
+    def search(self, line):
+        for token in TOKEN.findall(line.lower()):
+            parts = re.split(r"([.-])", token)  # words at even indexes, separators between
+            for i in range(0, len(parts), 2):
+                for j in range(i, len(parts), 2):
+                    if digest("".join(parts[i:j + 1])) in self.digests:
+                        return True
+        return False
+
+
+PRIVATE = PrivateName(PRIVATE_DIGESTS)
 # The old name may stay only where it is needed to read projects made before the rename.
 OLD_NAME = re.compile("boiler" + "plate|maj" + "lis", re.I)  # the two earlier names
 COMPATIBILITY = {"majles/cli.py", "majles/test_cli.py", "majles/test_template.py"}
@@ -224,12 +300,20 @@ class Portability(unittest.TestCase):
 
     def test_the_blocklist_catches_each_word(self):
         # A guard against a regex that quietly matches nothing.
-        for sample in ("/Us" "ers/me/x", "/ho" "me/me/x", "~/" "Personal/x", "asha" "herb",
-                       "github.com-" "personal", "project-" "boilerplate", "boilerplate/bp" ".py",
-                       "ai-for-" "kids", "kids-" "rts", "game-" "studio", "daf" "tar",
-                       "majles-" "hq", "majles-" "media"):
+        for sample in ("/Us" "ers/me/x", "/ho" "me/me/x", "~/" "Personal/x", "asha" "herb"):
             self.assertTrue(BLOCKLIST.search(sample), sample)
         self.assertFalse(BLOCKLIST.search("majles new my-idea"))
+
+    def test_the_private_names_are_digests_and_are_caught_in_context(self):
+        # The digests cannot be checked against the words without naming them here, so the
+        # matcher is checked with stand-in words instead.
+        self.assertTrue(all(re.fullmatch(r"[0-9a-f]{16}", d) for d in PRIVATE_DIGESTS))
+        stand_in = PrivateName({digest("acme"), digest("acme-lab"), digest("lab.py")})
+        for line in ("see ../Acme/README", "git@host:me/acme-lab.git", "run tools/lab.py now",
+                     "mail x.y@acme.example"):
+            self.assertTrue(stand_in.search(line), line)
+        for line in ("acmes", "lab", "a lab.pyc file", "majles new my-idea"):
+            self.assertFalse(stand_in.search(line), line)
 
     def test_the_exempt_files_are_never_shipped(self):
         # An exemption covers the repo's own copy only. A shipped file is always checked in full.
@@ -238,11 +322,13 @@ class Portability(unittest.TestCase):
         self.assertTrue(exempt <= REPO_LEVEL, "only repo-level files may be exempt")
 
     def test_shipped_files_carry_no_personal_paths_or_accounts(self):
-        hits = self.hits(BLOCKLIST, {src for _, _, src, _ in ENTRIES})
+        shipped = {src for _, _, src, _ in ENTRIES}
+        hits = self.hits(BLOCKLIST, shipped) + self.hits(PRIVATE, shipped)
         self.assertFalse(hits, "personal words in shipped files:\n" + "\n".join(hits))
 
     def test_the_repo_carries_none_outside_the_compatibility_code(self):
         hits = self.hits(BLOCKLIST, set(all_repo_files()) - COMPATIBILITY - NAMES_THE_MAINTAINER)
+        hits += self.hits(PRIVATE, set(all_repo_files()) - COMPATIBILITY)
         self.assertFalse(hits, "personal words in the repo:\n" + "\n".join(hits))
 
     def test_the_old_name_is_only_in_the_compatibility_code(self):
@@ -345,6 +431,66 @@ class Settings(unittest.TestCase):
         self.assertIn(" check ", command)
         self.assertTrue(command.rstrip().endswith("exit 0"), "the hook must never fail a session")
 
+
+    def denied(self, path):
+        # Each rule is Read(./<glob>) for the project root or Read(**/<glob>) for any folder.
+        # fnmatchcase on the file name is a stand-in for Claude Code's own matching.
+        rules = json.loads(text(".claude/settings.json"))["permissions"]["deny"]
+        name, nested = path.split("/")[-1], "/" in path
+        for rule in rules:
+            where, glob = rule[len("Read("):-1].split("/", 1)
+            if fnmatch.fnmatchcase(name, glob) and (where == "**" or not nested):
+                return True
+        return False
+
+    def test_secret_files_are_denied_to_the_read_tool(self):
+        # Issue #45. A deny rule stops Claude's Read tool, not a shell command; the agents
+        # rule and the README say so. Each name is denied at the root and in any folder.
+        rules = json.loads(text(".claude/settings.json"))["permissions"]["deny"]
+        self.assertTrue(all(r.startswith("Read(") for r in rules))
+        for path in (".env", ".env.local", ".env.production.local", ".env.development",
+                     ".env.production", ".env.staging", ".env.test", "server.pem", "tls/private.key",
+                     "gcp-service-account.json", "service-account.json", "serviceAccountKey.json",
+                     "api/.env", "api/.env.production", "keys/deploy.pem"):
+            self.assertTrue(self.denied(path), path)
+
+    def test_the_committed_example_stays_readable(self):
+        # .env.example is committed and holds names only (.gitignore keeps it), so agents
+        # must be able to read and edit it. A blanket .env.* would deny it.
+        for path in (".env.example", "api/.env.example", "package.json", "keys.md"):
+            self.assertFalse(self.denied(path), path)
+
+    def test_the_limit_of_a_deny_rule_is_stated(self):
+        for rel in (".claude/rules/agents.md", "README.md"):
+            self.assertTrue("shell command" in " ".join(text(rel).split()), rel)
+
+
+class Release(unittest.TestCase):
+    def test_the_readme_banner_matches_the_version(self):
+        # Issue #38: the pre-release banner leaves the README in the same pull request
+        # that sets the final version, and the upload follows the merge (MAINTAINING.md).
+        import majles
+        prerelease = bool(re.search(r"(a|b|rc|dev)\d*$", majles.__version__))
+        readme = text("README.md")
+        for marker in ("**Status: pre-release.**", "### Installing before 0.1.0"):
+            self.assertEqual(marker in readme, prerelease, f"{marker} vs {majles.__version__}")
+
+class TheUsersWords(unittest.TestCase):
+    def test_no_shipped_rule_attributes_dated_words_to_the_developer(self):
+        # Issue #37: in a project, "the developer" is its user. A dated quote of "the
+        # developer" in a shipped file reads as something that user said. Only
+        # docs/direction.md holds the developer's words, and it ships empty.
+        date = re.compile(r"\b20\d\d-\d\d-\d\d\b")
+        hits = []
+        for _, _, src, _ in ENTRIES:
+            if not src.endswith(".md") or src.startswith("docs/research/"):
+                continue
+            for para in text(src).split("\n\n"):
+                if "developer" in para.lower() and date.search(para):
+                    hits.append(f"{src}: {para.strip()[:80]}")
+                if re.search(r"\*\*Why:\*\* the developer", para):
+                    hits.append(f"{src}: {para.strip()[:80]}")
+        self.assertFalse(hits, "dated or unscoped words given as the developer's:\n" + "\n".join(hits))
 
 if __name__ == "__main__":
     unittest.main()

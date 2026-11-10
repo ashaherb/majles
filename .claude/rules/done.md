@@ -44,6 +44,6 @@ It stops every server, watcher and background command it started, and says so.
 
 **Why:** in an earlier project every test and eval passed on a fake model
 while the real one refused nearly every request; 1,885 tests passed while the
-screens were visibly broken; the developer found the defects one screen at a
+screens were visibly broken; its developer found the defects one screen at a
 time, as the first person to use the product; and a dev server an agent left
 running stopped the next test run from starting.

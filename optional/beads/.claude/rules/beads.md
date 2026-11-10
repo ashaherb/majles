@@ -60,5 +60,7 @@ Never run `bd dolt push`, `bd sync`, or a `bd backup init` that points at
 DoltHub or any hosted service. `dolt.local-only` is set, so a push is refused
 anyway, and usage metrics are off.
 
-**Why:** the developer wants the self-hosted option and no payments at all. A
-hosted sync is a service, and a bill, nobody asked for.
+**Why:** the queue holds the project's plans, and Majles chose a queue that
+needs no service and no payment. A hosted sync is a service, and a bill, nobody
+asked for. A project that wants one detaches this rule (`majles detach`) and
+records the choice.

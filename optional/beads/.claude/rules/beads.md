@@ -46,7 +46,8 @@ pass `--host`.
 Beads holds the queue, not the reasoning. Decisions still go where
 `decisions.md` says, and the developer's words in `docs/direction.md`.
 
-Never run `bd init` without the flags in the Majles setup, or
+Never run `bd init` without the flags in the Majles setup (`majles board` prints
+them), or
 `bd setup`, `bd hooks install` or a `bd prime` hook. Default init points
 `core.hooksPath` away from `.githooks`, which silently turns off the guard on
 `main`; it also makes its own commit and writes agent instructions that

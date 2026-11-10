@@ -93,8 +93,8 @@ majles enable ai        # calls a model at runtime: adds the ai agent, its rule,
                        # and evals/README.md
 majles enable legal     # minors, payments, health or financial data, or a
                        # regulated client: adds the legal agent and docs/legal/
-majles disable beads    # no shared work queue: removes .claude/rules/beads.md.
-                       # On by default; set it up in step 4b
+majles disable beads    # only when the developer says no to the queue and its
+                       # board; step 4b asks. Removes .claude/rules/beads.md
 ```
 
 After `enable i18n` or `enable ai`, add `i18n.md` or `ai.md` to the rules list
@@ -127,17 +127,58 @@ existing `origin`.
 
 ## 4b. The work queue (beads module, on by default)
 
-Beads (`bd`) and its board, beads-ui, are both open source (MIT), self-hosted
-and free. Nothing here talks to a hosted service. `<prefix>` is a short issue
-prefix, such as the slug's initials.
+The board is one of Majles's core features. It is one queue of work that every
+session and agent shares, with a page on this machine that shows who has what
+and what blocks what. Without it, sessions cannot see each other's work, and
+the developer has no one view of it.
 
-First see what is already there: `command -v bd bdui`, `node --version`,
-`command -v brew`. Install only what is missing, and stop at the first way that
-works.
+It needs three things, all open source (MIT), self-hosted and free. Nothing
+here talks to a hosted service.
 
-`bd`, the queue, pinned to version 1.3.4, a tested release. Never install
-1.2.1: it was published by accident, and migrates the database so that other
-versions refuse it.
+- `bd`, the queue, pinned to version 1.3.4, a tested release. Never install
+  1.2.1: it was published by accident, and migrates the database so that other
+  versions refuse it.
+- Node 22 or later, which the board view runs on.
+- beads-ui (`bdui`), the board view.
+
+If the developer said no to the queue in step 1, tell them in one line what
+they give up (the opening of this section), and that `majles board` turns it on
+later. If they still say no, do as "Continue without the board" says below for
+a missing `bd`. Otherwise run:
+
+```bash
+majles board
+```
+
+It lists each of the three as present or missing, with the install commands for
+this machine. If it lists nothing missing, go on to "Then set up the queue".
+
+**If anything is missing, stop.** Never turn the board off, skip a part of it,
+or install anything without asking. Tell the developer, in a few lines:
+
+1. what is missing, by name;
+2. why it matters, in the sentences that open this section;
+3. the exact commands that install it on their machine, from `majles board`'s
+   output and the ways below.
+
+Then ask: **install it now, or continue without the board for now?** Wait for
+the answer. It is theirs to make, not yours.
+
+- **Install now:** install what is missing, in the ways below, then run
+  `majles board` again until it lists nothing missing.
+- **Continue without the board:** if `bd` is there and only Node or beads-ui is
+  missing, keep the module on and set up the queue below: it works without its
+  view. If `bd` is missing, run `majles disable beads`, remove `beads.md` from
+  the rules list in `CLAUDE.md`, and skip the rest of this step. Either way,
+  run `majles board --off`: it records their no, with the date, in
+  `.majles.json`. Tell the developer that a session start will say the board is
+  off once a week, not every session, and that `majles board` turns it on any
+  time. Write the same in `README.md`, under how to run it.
+
+The ways to install each one, using what is already there (`command -v brew`,
+`node --version`). Stop at the first way that works.
+
+`bd`:
 
 - with Homebrew (macOS or Linux): `brew install beads`. Homebrew installs its
   own current version, not the pin; check `bd version` afterwards, and if it
@@ -165,14 +206,18 @@ versions refuse it.
   way past it; tell the developer, and treat `bd` as not installable. If `~/.local/bin` is not on
   `PATH`, tell the developer which line to add to their shell profile.
 
-`bdui`, the board, needs Node 22 or later: `npm i -g beads-ui`. If that fails
-with a permission error, never use `sudo`; run
-`npm i -g --prefix ~/.local beads-ui` instead. The board is only a view: with
-no Node, skip it, say so in `README.md`, and use `bd` alone.
+Node 22 or later:
 
-If `bd` cannot be installed, or the developer does not want the queue, run
-`majles disable beads`, remove `beads.md` from the rules list in `CLAUDE.md`,
-and skip the rest of this step. `majles enable beads` brings it back later.
+- on macOS: `brew install node`;
+- on Linux: the distribution's package manager, if its Node is 22 or later
+  (check with `node --version` afterwards);
+- otherwise, on either: the official installer or binary from
+  https://nodejs.org/en/download.
+
+Never pipe a downloaded script into a shell to install any of these.
+
+beads-ui: `npm i -g beads-ui`. If that fails with a permission error, never use
+`sudo`; run `npm i -g --prefix ~/.local beads-ui` instead.
 
 Then set up the queue:
 
@@ -260,4 +305,5 @@ python3 -m unittest tools/test_render_decisions.py tools/test_render_status.py
    and reaches `main` through a pull request like any other change.
 4. Tell the developer to start a new session so the agents, rules and hook
    load, and that Phase 0 starts with "run the architect on the Phase 0 brief
-   in CLAUDE.md".
+   in CLAUDE.md". If the board is off, say so again: what is missing, and that
+   `majles board` turns it on.

@@ -9,6 +9,7 @@ import io
 import json
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -611,7 +612,19 @@ class Adopt(Base):
             bp.cmd_adopt(self.bp, self.existing(), ["core", "nope"], True, False)
 
 
+def board_works(test):
+    """Other notices are tested on their own: pin the board's notice to "the board works",
+    whatever this machine has on its PATH."""
+    patch = mock.patch.object(bp, "board_notice", return_value=None)
+    patch.start()
+    test.addCleanup(patch.stop)
+
+
 class Check(Base):
+    def setUp(self):
+        super().setUp()
+        board_works(self)
+
     def check(self):
         return quiet(bp.cmd_check, self.bp, self.project)[1]
 
@@ -634,6 +647,270 @@ class Check(Base):
     def test_never_raises(self):
         (self.project / bp.LOCK).write_text("not json")
         self.assertEqual(self.check(), "")
+
+class StandIns(Base):
+    """Stand-ins for bd, node and bdui on a PATH that holds only them and git."""
+
+    def setUp(self):
+        super().setUp()
+        self.bin = pathlib.Path(self.tmp.name) / "bin"
+        self.bin.mkdir()
+        (self.bin / "git").symlink_to(shutil.which("git"))
+        path = mock.patch.dict(os.environ, {"PATH": str(self.bin)})
+        path.start()
+        self.addCleanup(path.stop)
+
+    def tools(self, bd="1.3.4", node="v22.11.0", bdui=True):
+        """Put stand-ins on the PATH; None leaves a tool out."""
+        for name in ("bd", "node", "bdui"):
+            (self.bin / name).unlink(missing_ok=True)
+        stubs = {"bd": bd and f"bd version {bd} (abc1234)", "node": node, "bdui": "ok" if bdui else None}
+        for name, says in stubs.items():
+            if says:
+                (self.bin / name).write_text(f"#!/bin/sh\necho '{says}'\n")
+                (self.bin / name).chmod(0o755)
+
+    def board(self, system="Darwin"):
+        return quiet(bp.cmd_board, self.bp, self.project, system)
+
+    def notice(self):
+        return bp.board_notice(self.project)
+
+
+class Board(StandIns):
+    """`majles board` and the board's session-start notice."""
+
+    def test_everything_present_works_and_is_silent_at_session_start(self):
+        self.tools()
+        (self.project / ".beads").mkdir()
+        code, out = self.board()
+        self.assertEqual(code, 0)
+        self.assertEqual(out.count("  present  "), 3)
+        self.assertNotIn("missing", out)
+        self.assertIn("The board works. Start it with: bdui start --port <port>", out)
+        self.assertIsNone(self.notice())
+
+    def test_each_missing_part_comes_with_its_install_commands(self):
+        self.tools(bd=None, node=None, bdui=False)
+        code, out = self.board("Darwin")
+        self.assertEqual(code, 1)
+        self.assertEqual(out.count("  missing  "), 3)
+        for line in ("brew install beads", "npm i -g @beads/bd@1.3.4", "releases/tag/v1.3.4",
+                     "brew install node", bp.NODE_DOWNLOAD, "npm i -g beads-ui",
+                     "npm i -g --prefix ~/.local beads-ui"):
+            self.assertIn(line, out)
+        self.assertNotIn("sudo npm", out)
+        self.assertIn("The board is off until bd is present.", out)
+        self.assertIn(f"then run {bp.SELF} board again", out)
+
+    def test_linux_gets_its_own_commands_first(self):
+        self.tools(bd=None, node=None)
+        out = self.board("Linux")[1]
+        bd = out.split("missing  bd", 1)[1].split("missing  Node", 1)[0]
+        node = out.split("missing  Node", 1)[1]
+        self.assertLess(bd.index("npm i -g @beads/bd@1.3.4"), bd.index("brew install beads"))
+        self.assertIn("your distribution's package manager", node)
+        self.assertIn(bp.NODE_DOWNLOAD, node)
+        self.assertNotIn("brew install node", node)
+
+    def test_nothing_from_the_network_is_piped_into_a_shell(self):
+        # Setup runs these lines through Claude, so none may pipe a download into a shell.
+        self.tools(bd=None, node=None, bdui=False)
+        for system in ("Darwin", "Linux"):
+            out = self.board(system)[1]
+            self.assertNotRegex(out, r"\|\s*(ba|z)?sh\b")
+            self.assertNotIn("curl", out)
+
+    def test_node_older_than_22_counts_as_missing(self):
+        self.tools(node="v20.11.0")
+        code, out = self.board()
+        self.assertEqual(code, 1)
+        self.assertIn("missing  Node 22 or later, which the board view runs on: v20.11.0, too old", out)
+        self.assertIn("The queue works, but the board view is off", out)
+
+    def test_the_accidental_bd_release_counts_as_missing(self):
+        self.tools(bd="1.2.1")
+        code, out = self.board()
+        self.assertEqual(code, 1)
+        self.assertIn("missing  bd, the queue: 1.2.1, a release published by accident", out)
+
+    def test_turns_the_beads_module_on_once_bd_is_present(self):
+        quiet(bp.cmd_disable, self.bp, "beads", self.project)
+        self.tools(bdui=False)
+        code, out = self.board()
+        self.assertEqual(code, 1)  # the view is still missing
+        self.assertIn("beads", self.lock()["modules"])
+        self.assertEqual(self.read("rules/beads.md"), "beads v1\n")
+        self.assertIn("Add `beads.md` to the rules list in CLAUDE.md.", out)
+
+    def test_leaves_the_module_off_without_bd(self):
+        quiet(bp.cmd_disable, self.bp, "beads", self.project)
+        self.tools(bd=None)
+        code, out = self.board()
+        self.assertEqual(code, 1)
+        self.assertNotIn("beads", self.lock()["modules"])
+        self.assertIn("The beads module stays off until bd is installed.", out)
+
+    def test_gives_the_safe_queue_setup_until_the_queue_exists(self):
+        self.tools()
+        out = self.board()[1]
+        for line in bp.QUEUE_SETUP:
+            self.assertIn(line, out)
+        (self.project / ".beads").mkdir()
+        self.assertNotIn("bd init", self.board()[1])
+
+    def test_the_notice_names_what_is_off_and_the_one_command(self):
+        quiet(bp.cmd_disable, self.bp, "beads", self.project)
+        self.tools()
+        self.assertEqual(self.notice(),
+                         f"The board is off: the beads module is disabled. Turn it on: {bp.SELF} board")
+        quiet(bp.cmd_enable, self.bp, "beads", self.project)
+        self.tools(bd=None)
+        self.assertEqual(self.notice(), f"The board is off: bd is not installed. Turn it on: {bp.SELF} board")
+        self.tools(bdui=False)
+        self.assertEqual(self.notice(),
+                         f"The board view is off: beads-ui is not installed. Turn it on: {bp.SELF} board")
+
+    def test_the_notice_waits_for_setup(self):
+        self.tools(bd=None)
+        (self.project / bp.SETUP_GUIDE).write_text("setup\n")
+        self.assertIsNone(self.notice())
+
+    def test_check_carries_the_notice_and_fails_open(self):
+        self.tools(bd=None)
+        code, out = quiet(bp.cmd_check, self.bp, self.project)
+        self.assertEqual(code, 0)
+        self.assertIn("The board is off: bd is not installed.", json.loads(out)["systemMessage"])
+        with mock.patch.object(bp, "board_notice", side_effect=RuntimeError("broken")):
+            self.assertEqual(quiet(bp.cmd_check, self.bp, self.project), (0, ""))
+
+    def test_board_refuses_a_directory_that_is_not_a_majles_project(self):
+        with self.assertRaises(bp.MajlesError):
+            bp.cmd_board(self.bp, pathlib.Path(self.tmp.name))
+
+
+class BoardDeclined(StandIns):
+    """A recorded no to the board (DECISIONS.md, entry 13): `majles board --off` records it
+    with the date, the notice then shows once a week, and `majles board` clears it."""
+
+    DAY = datetime.date(2026, 11, 10)
+
+    def setUp(self):
+        super().setUp()
+        run("git", "init", "-q", "-b", "main", cwd=self.project)
+        quiet(bp.cmd_disable, self.bp, "beads", self.project)
+        self.tools(bd=None)
+
+    def off(self, day=None):
+        return quiet(bp.cmd_board_off, self.project, day or self.DAY)
+
+    def on(self, day):
+        return bp.board_notice(self.project, today=self.DAY + datetime.timedelta(days=day))
+
+    def weekly(self):
+        return (f"The board is off on purpose (since {self.DAY.isoformat()}). This shows once a "
+                f"week. Turn it on any time: {bp.SELF} board")
+
+    def test_off_records_the_choice_and_its_date_in_the_lock(self):
+        code, out = self.off()
+        self.assertEqual(code, 0)
+        self.assertEqual(self.lock()[bp.DECLINED], "2026-11-10")
+        self.assertIn(f"Turn it on any time: {bp.SELF} board", out)
+        self.assertEqual(self.lock()["modules"].count("beads"), 0)  # it removes nothing
+
+    def test_without_a_recorded_no_the_notice_shows_every_session(self):
+        for day in range(3):
+            self.assertEqual(self.on(day), f"The board is off: the beads module is disabled. "
+                                           f"Turn it on: {bp.SELF} board")
+
+    def test_with_a_recorded_no_the_notice_shows_once_every_seven_days(self):
+        self.off()
+        shown = [day for day in range(0, 30) if self.on(day)]
+        self.assertEqual(shown, [7, 14, 21, 28])
+        self.assertEqual(self.on(35), self.weekly())
+
+    def test_a_missed_week_shows_at_the_next_session_and_restarts_the_count(self):
+        self.off()
+        self.assertIsNone(self.on(3))
+        self.assertEqual(self.on(12), self.weekly())
+        self.assertIsNone(self.on(18))
+        self.assertIsNotNone(self.on(19))
+
+    def test_the_weekly_count_is_shared_by_worktrees(self):
+        self.off()
+        (self.project / "f").write_text("x\n")
+        run("git", "add", "-A", cwd=self.project)
+        run("git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "x",
+            cwd=self.project)
+        tree = pathlib.Path(self.tmp.name) / "tree"
+        run("git", "worktree", "add", "-q", str(tree), cwd=self.project)
+        self.assertEqual(bp.git_dir(tree), bp.git_dir(self.project).resolve())
+        self.assertIsNotNone(self.on(7))
+        self.assertIsNone(bp.board_notice(tree, today=self.DAY + datetime.timedelta(days=8)))
+        self.assertIsNotNone(bp.board_notice(tree, today=self.DAY + datetime.timedelta(days=14)))
+
+    def test_the_stamp_stays_out_of_the_working_tree(self):
+        self.off()
+        self.on(7)
+        self.assertTrue((self.project / ".git" / bp.NOTICE_SHOWN).is_file())
+        status = subprocess.run(["git", "status", "--porcelain"], cwd=self.project,
+                                capture_output=True, text=True).stdout
+        self.assertNotIn(bp.NOTICE_SHOWN, status)
+
+    def test_outside_git_the_notice_still_keeps_the_week_from_the_no(self):
+        shutil.rmtree(self.project / ".git")
+        self.off()
+        self.assertIsNone(self.on(6))
+        self.assertEqual(self.on(7), self.weekly())
+
+    def test_a_board_that_works_says_nothing_even_with_a_recorded_no(self):
+        quiet(bp.cmd_enable, self.bp, "beads", self.project)
+        self.tools()
+        self.off()
+        self.assertIsNone(self.on(7))
+
+    def test_a_broken_date_is_loud_not_silent(self):
+        lock = self.lock()
+        lock[bp.DECLINED] = "last tuesday"
+        (self.project / bp.LOCK).write_text(json.dumps(lock))
+        self.assertIn("beads module is disabled", self.on(1))
+
+    def test_a_broken_stamp_is_ignored(self):
+        self.off()
+        (self.project / ".git" / bp.NOTICE_SHOWN).write_text("garbage\n")
+        self.assertIsNone(self.on(6))
+        self.assertEqual(self.on(7), self.weekly())
+
+    def test_board_clears_the_no_and_turns_the_board_on_once_bd_is_present(self):
+        self.off()
+        self.tools()
+        code, out = self.board()
+        self.assertIn("Cleared the recorded no", out)
+        self.assertNotIn(bp.DECLINED, self.lock())
+        self.assertIn("beads", self.lock()["modules"])
+
+    def test_board_keeps_the_no_while_bd_is_missing(self):
+        self.off()
+        out = self.board()[1]
+        self.assertNotIn("Cleared", out)
+        self.assertEqual(self.lock()[bp.DECLINED], "2026-11-10")
+
+    def test_after_the_no_is_cleared_a_missing_part_shows_every_session_again(self):
+        self.off()
+        self.tools(bdui=False)
+        self.board()
+        self.assertEqual(self.on(1), f"The board view is off: beads-ui is not installed. "
+                                     f"Turn it on: {bp.SELF} board")
+
+    def test_check_still_starts_the_session_when_the_weekly_check_breaks(self):
+        self.off()
+        with mock.patch.object(bp, "weekly_due", side_effect=RuntimeError("broken")):
+            self.assertEqual(quiet(bp.cmd_check, self.bp, self.project), (0, ""))
+
+    def test_the_command_line_takes_off(self):
+        with mock.patch.object(bp, "cmd_board_off", return_value=0) as off:
+            quiet(bp.main, ["board", "--off", str(self.project)])
+        off.assert_called_once()
 
 
 REQUEST = """# Research request: the stack
@@ -877,6 +1154,10 @@ class ResearchFind(unittest.TestCase):
 
 
 class CheckLint(Base):
+    def setUp(self):
+        super().setUp()
+        board_works(self)
+
     def bad_request(self):
         d = self.project / "docs/research/2026-10-22-architect-a"
         d.mkdir(parents=True)
@@ -918,6 +1199,7 @@ class Packaged(unittest.TestCase):
         self.project = self.root / "proj"
         self.v1 = self.package("v1", FILES)
         quiet(bp.cmd_new, bp.PackageSource(self.v1, "0.1.0"), str(self.project))
+        board_works(self)
 
     def tearDown(self):
         self.tmp.cleanup()

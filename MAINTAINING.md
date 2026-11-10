@@ -113,6 +113,20 @@ The session-start hook runs `lint` too, and adds one line to its notice when it
 finds anything. Existing projects get this without changing their settings,
 because the hook already calls `majles check`.
 
+The board is never off quietly (`DECISIONS.md`, entry 12). While the beads module
+is off, or `bd` or `bdui` is not on the `PATH`, the notice carries one more line
+naming what is off, with `majles board`. That line looks only at the lock and the
+`PATH`, so the hook stays fast, and stays silent while `SETUP.md` is still there.
+`majles board` does the full check: `bd` and its version, Node 22 or later, and
+beads-ui, each with its install commands for macOS or Linux, and it turns the
+beads module on once `bd` is there. It exits 0 only when the whole board works.
+`majles board --off` records a no on purpose as `board_declined`, a date, in the
+lock (entry 13); with it, the line shows once every 7 days. The date it last showed
+is `majles-board-notice` in the git directory, shared by worktrees and never in the
+working tree. `majles board` deletes the no once `bd` is there.
+`BD_VERSION` and `QUEUE_SETUP` in `cli.py` must match `template/SETUP.md`; a test
+in `test_template.py` fails when they drift.
+
 `research-find` searches the request titles and "The decision" sections of every
 project under the projects root, case-insensitively, for all the words given. Matches
 older than 90 days are marked `stale`. The main session runs it before starting
@@ -147,8 +161,8 @@ template `CLAUDE.md` points a new session at it, and setup deletes it when done.
 
 ```
 MAINTAINING.md            this guide; stays here
-majles/cli.py             new, adopt, enable, disable, sync, check, detach,
-                          lint, research-find, migrate; `python3 -m majles`
+majles/cli.py             new, adopt, enable, disable, sync, check, board,
+                          detach, lint, research-find, migrate; `python3 -m majles`
 majles/manifest.txt       every shipped file, as shared or once, by module
 majles/test_*.py          tests for the CLI, and checks on the template itself
 .githooks/pre-push        refuses pushes to main, then runs pre-push.local

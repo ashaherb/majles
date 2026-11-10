@@ -20,6 +20,11 @@ The first public release. (On PyPI, 0.0.1 is only a placeholder that reserves th
   guard against pushes to `main`, and publishes the decision log.
 - **Modules** you turn on or off: `ui`, `beads` (a local work queue and board), `i18n`,
   `content`, `ai` and `legal`.
+- **The board is never off quietly.** If `bd`, Node 22 or the board view is missing,
+  setup stops, says what and why, gives the install commands and asks you. While the
+  board is off, every session opens with one line saying so, and `majles board` checks
+  what is missing and turns it on. If you say no on purpose (in setup, or with
+  `majles board --off`), the line shows once a week instead.
 - **Staying current:** `majles sync` previews and applies template updates without
   touching the files your project owns, and `majles lint` checks the research and ADR
   rules.
@@ -33,6 +38,11 @@ template, under this name or an earlier one. A new project needs none of it.
   "the developer" said on a date in Majles's own history; in your project that read as
   something you said. They now say "in an earlier project". `docs/direction.md` is
   still the only place your words are kept.
+- **A board that is off now says so.** With this `majles` installed, every session
+  start says when the `beads` module is off, or `bd` or beads-ui is missing, until
+  `majles board` lists nothing missing. Your hook already calls `majles check`, so
+  nothing in the project changes for this. Sync changes one line of
+  `.claude/rules/beads.md`, which now points at `majles board` for the `bd init` flags.
 - **Wider read-deny rules for secrets.** New projects deny Claude's Read tool on `.env`
   variants (not `.env.example`), `*.pem`, `*.key` and service-account JSON.
   `.claude/settings.json` is yours, so sync does not change it: copy the `deny` list

@@ -11,8 +11,12 @@ Zero dependencies. Python 3.10+. Run it from anywhere (or as `python3 -m majles`
     majles disable <module> [project]       turn a module off
     majles sync [project] [--apply] [--diff] [--take PATH ...]
     majles sync --all [--apply]             every project under <root>
-    majles check [project]                  notice if behind or lint finds anything;
-                                           the SessionStart hook
+    majles check [project]                  notice if behind, lint finds anything, or the board
+                                           is off; the SessionStart hook
+    majles board [project]                  check bd, Node and the board view, say what is
+                                           missing, and turn the beads module on
+    majles board --off [project]            record that the project goes without the board on
+                                           purpose; the session notice then shows once a week
     majles detach <path> [project]          the project takes over a shared file
     majles lint [project]                   check research, ADRs, standing-text size and the main guard
     majles placeholders [project]           placeholders left in the files the project owns
@@ -31,7 +35,8 @@ creation that the project owns from then on).
 
 Each project records what it received in .majles.json: the Majles version it
 last synced to, its modules, and a hash of every shared file as it
-was delivered. A shared file whose hash no longer matches was edited in the
+was delivered. It also records, with the date, a decision to go without the board
+(`board_declined`). A shared file whose hash no longer matches was edited in the
 project. Sync reports it and leaves it alone rather than overwrite that work.
 
 The template comes from one of two places. Run from a git checkout of Majles,
@@ -54,10 +59,13 @@ import hashlib
 import json
 import os
 import pathlib
+import platform
 import re
 import shlex
+import shutil
 import subprocess
 import sys
+import textwrap
 
 from . import __version__
 
@@ -689,7 +697,7 @@ def cmd_check(bp, project):
         return 0
     notices = []
     for notice in (lambda: update_notice(bp, project), lambda: lint_notice(project),
-                   lambda: migrate_notice(project)):
+                   lambda: migrate_notice(project), lambda: board_notice(project)):
         try:
             msg = notice()
         except Exception:
@@ -785,6 +793,246 @@ def cmd_detach(project, path):
     save_lock(project, lock)
     print(f"{path} now belongs to this project. Sync will skip it.")
     return 0
+
+
+# ---------------------------------------------------------------- the board
+#
+# The board is the beads module: bd (the queue) and beads-ui (its local view, which runs
+# on Node). It is one of Majles's core features, so it is never off quietly: setup asks
+# before going on without it, `check` says so on every session while it is off, and
+# `majles board` says what is missing and turns the module on (DECISIONS.md, entry 12).
+# A project that says no on purpose (`majles board --off`, which setup runs) has the date
+# in its lock, and then hears about it once a week instead (entry 13).
+
+BD_VERSION = "1.3.4"  # the tested release SETUP.md pins; never 1.2.1
+BD_BAD_VERSION = "1.2.1"  # published by accident; it migrates the database so other versions refuse it
+BD_BAD_NOTE = (f"{BD_BAD_VERSION}, a release published by accident that breaks the queue for "
+               "other versions: uninstall it")
+NODE_MAJOR = 22  # beads-ui, and bd from npm, need Node 22 or later
+NODE_DOWNLOAD = "https://nodejs.org/en/download"  # the official page; nothing is piped into a shell
+BOARD_WHY = ("The board is one queue of work that every session and agent shares, with a page "
+             "on this machine that shows who has what and what blocks what. Without it, "
+             "sessions cannot see each other's work, and you have no one view of it.")
+QUEUE_SETUP = (  # the same lines as SETUP.md step 4b; a test keeps the two equal
+    "bd init -p <prefix> -q --skip-hooks --skip-agents --setup-exclude",
+    "bd config set dolt.local-only true",
+    "bd metrics off",
+    'ex="$(git rev-parse --git-common-dir)/info/exclude"',
+    "grep -vE '(RECOVERY|SESSION)\\*\\.md' \"$ex\" > \"$ex.tmp\" && mv \"$ex.tmp\" \"$ex\"",
+)
+
+BoardPart = collections.namedtuple("BoardPart", "label ok found install")
+
+DECLINED = "board_declined"  # the lock key: the ISO date the project said no to the board
+NOTICE_EVERY_DAYS = 7  # with a recorded no, the session notice shows at most this often
+NOTICE_SHOWN = "majles-board-notice"  # in the git dir: the date the weekly notice last showed
+
+
+def tool_output(*cmd):
+    """The first line a tool prints, or None if it cannot be run. Never raises."""
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    lines = (r.stdout or r.stderr).strip().splitlines()
+    return lines[0].strip() if r.returncode == 0 and lines else None
+
+
+def node_major(text):
+    m = re.match(r"v?(\d+)\.", text or "")
+    return int(m.group(1)) if m else None
+
+
+def install_lines(part, system):
+    """The commands that install one part of the board, on macOS or Linux."""
+    mac = system == "Darwin"
+    if part == "bd":
+        npm = f"npm i -g @beads/bd@{BD_VERSION}"
+        binary = (f"or the release binary, checked against its checksums.txt: "
+                  f"https://github.com/gastownhall/beads/releases/tag/v{BD_VERSION}")
+        if mac:
+            return ["brew install beads", f"or, with Node {NODE_MAJOR} or later: {npm}", binary]
+        return [f"{npm}   (needs Node {NODE_MAJOR} or later)", "or, with Homebrew: brew install beads", binary]
+    if part == "node":
+        download = f"or the official download: {NODE_DOWNLOAD}"
+        if mac:
+            return ["brew install node", download]
+        return [f"your distribution's package manager, if its Node is {NODE_MAJOR} or later "
+                "(check with: node --version)", download]
+    return ["npm i -g beads-ui",
+            "on a permission error, never sudo: npm i -g --prefix ~/.local beads-ui"]
+
+
+def board_parts():
+    """bd, Node and beads-ui as found on this machine's PATH."""
+    bd = shutil.which("bd")
+    bd_text = tool_output(bd, "version") if bd else None
+    m = re.search(r"\d+\.\d+\.\d+", bd_text or "")
+    bd_version = m.group(0) if m else None
+    if not bd:
+        bd_found, bd_ok = "not found", False
+    elif bd_version == BD_BAD_VERSION:
+        bd_found, bd_ok = BD_BAD_NOTE, False
+    else:
+        bd_found, bd_ok = bd_version or "found", True
+
+    node = shutil.which("node")
+    node_text = tool_output(node, "--version") if node else None
+    major = node_major(node_text)
+    if not node:
+        node_found, node_ok = "not found", False
+    elif major is not None and major < NODE_MAJOR:
+        node_found, node_ok = f"{node_text}, too old", False
+    else:
+        node_found, node_ok = node_text or "found", True
+
+    bdui = shutil.which("bdui")
+    return [
+        BoardPart("bd, the queue", bd_ok, bd_found, "bd"),
+        BoardPart(f"Node {NODE_MAJOR} or later, which the board view runs on", node_ok, node_found, "node"),
+        BoardPart("beads-ui (bdui), the board view", bool(bdui), "found" if bdui else "not found", "bdui"),
+    ]
+
+
+def queue_dir(project):
+    """Where bd keeps the queue: `.beads/` in the main checkout, which every worktree shares."""
+    try:
+        r = subprocess.run(["git", "-C", str(project), "rev-parse", "--path-format=absolute",
+                            "--git-common-dir"], capture_output=True, text=True, timeout=5)
+        if r.returncode == 0 and r.stdout.strip():
+            return pathlib.Path(r.stdout.strip()).parent / ".beads"
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return project / ".beads"
+
+
+def git_dir(project):
+    """The repository's shared git directory, read from the files alone (no subprocess, so
+    the hook stays fast). Worktrees resolve to the main checkout's. None outside git."""
+    dot = project / ".git"
+    if dot.is_dir():
+        return dot
+    if not dot.is_file():
+        return None
+    m = re.match(r"gitdir:\s*(.+)", dot.read_text(encoding="utf-8").strip())
+    if not m:
+        return None
+    own = (project / m.group(1).strip()).resolve()
+    common = own / "commondir"
+    if common.is_file():
+        return (own / common.read_text(encoding="utf-8").strip()).resolve()
+    return own
+
+
+def weekly_due(project, declined, today):
+    """With a recorded no: True when the notice has not shown for NOTICE_EVERY_DAYS days,
+    counting from the no itself, and stamps today when it is. The stamp lives in the git
+    directory: it is this machine's, changes weekly, and must never dirty the working tree.
+    Without a git directory, or if the stamp cannot be read or written, the notice shows,
+    since being too loud is the safe failure here."""
+    since = datetime.date.fromisoformat(declined)
+    folder = git_dir(project)
+    stamp = folder / NOTICE_SHOWN if folder else None
+    try:
+        if stamp and stamp.is_file():
+            since = max(since, datetime.date.fromisoformat(stamp.read_text(encoding="utf-8").strip()))
+    except (OSError, ValueError):
+        pass
+    if (today - since).days < NOTICE_EVERY_DAYS:
+        return False
+    try:
+        if stamp:
+            stamp.write_text(today.isoformat() + "\n", encoding="utf-8")
+    except OSError:
+        pass
+    return True
+
+
+def board_notice(project, today=None):
+    """One line for the SessionStart hook while the board is off, else None. Only looks at
+    the lock and PATH, so it stays fast; `majles board` does the full check. Setup handles
+    the board itself, so a project still being set up gets no notice. Off because something
+    is missing, it shows on every session; off on purpose (a recorded no), once a week."""
+    if (project / SETUP_GUIDE).exists():
+        return None
+    lock = load_lock(project)
+    if "beads" not in lock.get("modules", []):
+        off = f"The board is off: the beads module is disabled. Turn it on: {SELF} board"
+    elif not shutil.which("bd"):
+        off = f"The board is off: bd is not installed. Turn it on: {SELF} board"
+    elif not shutil.which("bdui"):
+        off = f"The board view is off: beads-ui is not installed. Turn it on: {SELF} board"
+    else:
+        return None
+    declined = lock.get(DECLINED)
+    if not declined:
+        return off
+    try:
+        due = weekly_due(project, declined, today or datetime.date.today())
+    except ValueError:  # a hand-edited date: be loud rather than silent
+        return off
+    if not due:
+        return None
+    return (f"The board is off on purpose (since {declined}). This shows once a week. "
+            f"Turn it on any time: {SELF} board")
+
+
+def cmd_board_off(project, today=None):
+    """Record that the project goes without the board on purpose, with the date, in its
+    lock. Removes nothing: `majles disable beads` turns the module off."""
+    today = today or datetime.date.today()
+    lock = load_lock(project)
+    lock[DECLINED] = today.isoformat()
+    save_lock(project, lock)
+    print(f"Recorded in {LOCK}: the board is off on purpose, as of {today.isoformat()}.")
+    print(f"Each session start says so once a week, not every session. Turn it on any time: {SELF} board")
+    return 0
+
+
+def cmd_board(bp, project, system=None):
+    """Check bd, Node and beads-ui, say what is missing and how to install it, and turn the
+    beads module on once bd is there, clearing a recorded no. Exit 0 only when the whole
+    board works."""
+    system = system or platform.system()
+    lock = load_lock(project)
+    parts = board_parts()
+    if parts[0].ok and DECLINED in lock:
+        del lock[DECLINED]
+        save_lock(project, lock)
+        print(f"Cleared the recorded no to the board in {LOCK}: while any part is still "
+              "missing, each session start says so again.")
+        print()
+    print(textwrap.fill(BOARD_WHY, 88))
+    print()
+    for part in parts:
+        print(f"  {'present' if part.ok else 'missing'}  {part.label}: {part.found}")
+        if not part.ok:
+            for line in install_lines(part.install, system):
+                print(f"             {line}")
+    print()
+    bd_ok = parts[0].ok
+    module_on = "beads" in lock.get("modules", [])
+    if not module_on and bd_ok:
+        cmd_enable(bp, "beads", project)
+        print("Add `beads.md` to the rules list in CLAUDE.md.")
+        module_on = True
+    elif not module_on:
+        print("The beads module stays off until bd is installed.")
+    if module_on and bd_ok and not queue_dir(project).is_dir():
+        print("The queue is not set up yet. Run, with a short issue prefix such as the project's initials:")
+        for line in QUEUE_SETUP:
+            print(f"  {line}")
+        print("Never a bare `bd init`: it turns off the guard on main (.claude/rules/beads.md).")
+    if all(p.ok for p in parts) and module_on:
+        print("The board works. Start it with: bdui start --port <port>, "
+              "then open http://127.0.0.1:<port> (the port is in README.md).")
+        return 0
+    if bd_ok and module_on:
+        print("The queue works, but the board view is off until Node and beads-ui are present.")
+    else:
+        print("The board is off until bd is present.")
+    print(f"Install what is missing, then run {SELF} board again.")
+    return 1
 
 
 # ---------------------------------------------------------------- research
@@ -1063,6 +1311,8 @@ def main(argv=None):
     p.add_argument("--apply", action="store_true"); p.add_argument("--diff", action="store_true")
     p.add_argument("--all", action="store_true"); p.add_argument("--take", action="append", default=[])
     p = sub.add_parser("check"); p.add_argument("project", nargs="?")
+    p = sub.add_parser("board"); p.add_argument("project", nargs="?")
+    p.add_argument("--off", action="store_true")
     p = sub.add_parser("detach"); p.add_argument("path"); p.add_argument("project", nargs="?")
     p = sub.add_parser("lint"); p.add_argument("project", nargs="?")
     p = sub.add_parser("placeholders"); p.add_argument("project", nargs="?")
@@ -1089,6 +1339,10 @@ def main(argv=None):
             return cmd_sync(BP, resolve_project(a.project), a.apply, a.diff, a.take)
         if a.cmd == "check":
             return cmd_check(BP, resolve_project(a.project))
+        if a.cmd == "board":
+            if a.off:
+                return cmd_board_off(resolve_project(a.project))
+            return cmd_board(BP, resolve_project(a.project))
         if a.cmd == "detach":
             return cmd_detach(resolve_project(a.project), a.path)
         if a.cmd == "lint":

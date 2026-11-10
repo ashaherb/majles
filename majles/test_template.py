@@ -206,6 +206,25 @@ class SetupGuide(unittest.TestCase):
         self.assertIn(f"npm i -g @beads/bd@{version}", beads)
         self.assertIn(f"pinned to version {version}", beads)
 
+    def test_a_missing_board_stops_setup_and_asks(self):
+        # Issue #54: setup turned the board off quietly when bd or Node was missing.
+        beads = self.section("4b. The work queue (beads module, on by default)")
+        for line in ("majles board", "**If anything is missing, stop.**",
+                     "**install it now, or continue without the board for now?**",
+                     "brew install node", bp.NODE_DOWNLOAD,
+                     "majles board --off", "once a week, not every session"):
+            self.assertIn(line, beads)
+        self.assertNotIn("skip it, say so", beads)
+        self.assertNotRegex(beads, r"\|\s*(ba|z)?sh\b", "nothing is piped into a shell")
+        self.assertNotIn("curl", beads)
+
+    def test_majles_board_gives_the_same_queue_setup_and_pin_as_setup(self):
+        beads = self.section("4b. The work queue (beads module, on by default)")
+        for line in bp.QUEUE_SETUP:
+            self.assertIn(line, beads)
+        self.assertIn(f"pinned to version {bp.BD_VERSION}", beads)
+        self.assertIn(f"Never install {bp.BD_BAD_VERSION}", " ".join(beads.split()))
+
     def test_the_decision_log_falls_back_to_files_without_artifacts(self):
         # Issue #24: setup assumed every session can publish Artifacts.
         log = self.section("5. Decision log")

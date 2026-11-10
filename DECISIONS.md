@@ -176,3 +176,56 @@ and compared.
 word. The digests hide the names from a reader, not from someone guessing and hashing
 candidate words. Adding a name means computing its digest (the test's comment has the
 command).
+
+## 12. The board is never off quietly
+
+Problem. Setup turned the `beads` module off when `bd` could not be installed, and
+skipped the board view when Node was missing, then carried on (issue #54). The README
+said so in passing. A user could end up without the board and never know, and the
+board is one of Majles's core features. The maintainer, on 2026-11-10: "I hate it.
+This needs to be vocal. The board is one of the most important features, If it's
+disabled due to missing packages, the user needs to be aware of it and there should be
+a path to enable it in the future."
+
+Choice. The board is loud while it is off, and has one way back. Setup stops when
+`bd`, Node 22 or beads-ui is missing, says what and why, gives the install commands,
+and asks: install now, or continue without the board for now. It never decides for
+the user. While the module is off, or `bd` or `bdui` is not on the `PATH`, the
+session-start notice carries one line saying so, with `majles board`, on every session.
+`majles board` checks all three, prints the install commands for macOS or Linux, and
+turns the module on once `bd` is there. Keeping the board optional and silent, with
+the README's note as the only signal, was the alternative: fewer lines at session
+start, and a user who never learns what they lost.
+
+**Consequence:** a project that declines the board hears about it at every session
+until the board works; there is no switch to quiet it. The notice reads only the lock
+and the `PATH` (no subprocess), so the hook stays inside its 10-second timeout, and it
+stays silent while `SETUP.md` exists. `bd`'s pin and the queue setup lines live in both
+`cli.py` and `SETUP.md`, and a test keeps them equal. No install line pipes a download
+into a shell, since setup runs them through Claude: Node comes from Homebrew on macOS,
+the distribution's package manager on Linux, or nodejs.org's download page on both, and
+a test refuses a piped line.
+
+**Still open:** whether a user who says no on purpose should be able to quiet the
+notice. Closed by entry 13.
+
+## 13. A no to the board is quiet, but not gone
+
+Problem. Entry 12 left a user who declines the board on purpose hearing about it at
+every session, with no way to quiet it.
+
+Choice. The maintainer's, on 2026-11-10, word for word: "Quiet, but not gone: saying
+no in setup, or `majles board --off`, records the choice. The notice then shows once a
+week, not every session, and `majles board` still turns it on any time." The no is
+`board_declined`, a date, in `.majles.json`, because it is the project's choice and
+travels with the project to every clone. The date the weekly line last showed is
+machine state that changes every week, so it goes in the git directory
+(`majles-board-notice`), shared by worktrees and never in the working tree. A board
+that is off because something is missing, with no recorded no, still shows every
+session. `majles board --off` records only; `majles disable beads` removes the module.
+
+**Consequence:** this supersedes entry 12's "there is no switch to quiet it". Without a
+git directory there is nowhere to keep the last date, so the line shows every session
+from the seventh day after the no; a stamp that cannot be read counts from the no; a
+date that does not parse makes the line show every session. Too loud is the safe
+failure. `majles board` deletes the no once `bd` is there.

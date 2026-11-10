@@ -21,8 +21,11 @@ the first decisions your project makes, with the team.
 
 You need Python 3.10 or later, Git, [Claude Code](https://docs.claude.com/en/docs/claude-code),
 and the GitHub CLI (`gh`), signed in. Setup uses `gh` to create a private
-GitHub repo for the project. Setup also offers a work queue and installs what
-it needs; [The work queue](#the-work-queue) says what that is.
+GitHub repo for the project.
+
+For [the board](#the-board), one of Majles's core features, you also need
+Beads (`bd`), Node 22 or later, and the board view, beads-ui. Setup checks for
+them, and if any is missing it stops and asks you whether to install it now.
 
 ### 1. Install
 
@@ -86,8 +89,10 @@ Claude follows `SETUP.md`, in order:
 3. It turns [modules](#modules) on or off to match your answers.
 4. It runs `git init`, creates a private GitHub repo with `gh`, and turns on a
    git hook that refuses pushes to `main`.
-5. It sets up the work queue, unless you say no: Beads (`bd`) and its local
-   board, installing what is missing (see [The work queue](#the-work-queue)).
+5. It sets up [the board](#the-board). If `bd`, Node 22 or the board view is
+   missing, it stops, tells you what is missing and why it matters, gives you
+   the install commands, and asks: install now, or go on without the board for
+   now. It never decides that for you.
 6. It renders the decision log and a status page as HTML. Where your session
    can publish claude.ai Artifacts, it publishes each as one, a private page
    you can open on your phone. Where it cannot, it keeps them as files,
@@ -137,21 +142,45 @@ always says what comes next.
 
 `python3 tools/render_decisions.py <out.html>` renders them as one page.
 
-### The work queue
+### The board
 
-The `beads` module gives every session and agent one shared queue of work, on
-your machine only. Setup installs what is missing, so nothing needs to be there
-first:
+The board is one of Majles's core features. It is one queue of work that every
+session and agent shares, with a page on your machine that shows who has what
+and what blocks what. It runs on your machine only, and costs nothing.
 
-- **The queue, Beads (`bd`):** with Homebrew (`brew install beads`), else
-  with npm on Node 22 or later (`npm i -g @beads/bd@1.3.4`), else as the 1.3.4
-  release binary for your machine, downloaded with `gh` and installed only if
-  it matches the release's checksums.
-- **The board, beads-ui:** needs Node 22 or later (`npm i -g beads-ui`). With
-  no Node, setup skips the board and the queue works without it.
+It needs three things, all open source:
 
-If `bd` cannot be installed, or you do not want the queue, setup turns the
-`beads` module off and carries on. `majles enable beads` brings it back later.
+| What | Why | Install |
+| --- | --- | --- |
+| Beads (`bd`) 1.3.4 | The queue itself | `brew install beads`, or `npm i -g @beads/bd@1.3.4` |
+| Node 22 or later | The board view runs on it | macOS: `brew install node`. Linux: your package manager, if it has 22 or later. Either: [nodejs.org/en/download](https://nodejs.org/en/download) |
+| beads-ui (`bdui`) | The board view | `npm i -g beads-ui` |
+
+Without Homebrew or Node, setup can install `bd` as the release binary instead,
+checked against the release's checksums.
+
+> **Without the board,** sessions and agents cannot see each other's work: two
+> of them can take the same task, and a new session has to piece together what
+> is in flight from git history. You also lose the one page that shows it all.
+> Without Node or beads-ui, the queue still works but you have no page to see
+> it on.
+
+If something is missing, setup asks before it goes on without it. While the
+board is off, every new session opens with one line that says so, for example:
+
+```text
+The board is off: bd is not installed. Turn it on: majles board
+```
+
+Install what is missing, then run `majles board`. It lists what is present and
+what is still missing, with the install commands for macOS or Linux, and turns
+the `beads` module back on once `bd` is there. The session line goes away once
+the board works.
+
+If you go without the board on purpose, saying no in setup or running
+`majles board --off` records that choice, with the date, in `.majles.json`. The
+line then shows once a week instead of every session, and `majles board` still
+turns the board on any time.
 
 ### Installing before 0.1.0
 
@@ -199,7 +228,7 @@ answers, or you can later: `majles enable <module>`, `majles disable <module>`.
 | Module | For |
 | --- | --- |
 | `ui` | A visual interface: the designer and `design/`. On by default. |
-| `beads` | A shared work queue with a local board. On by default. |
+| `beads` | [The board](#the-board): a shared work queue and its local view. On by default. |
 | `i18n` | More than one language, or any right-to-left one. |
 | `content` | Products where the content is the product: an editor agent. |
 | `ai` | Products that call a model at runtime: an ai agent, its rule, and evals. |
@@ -265,6 +294,8 @@ majles detach <path>          the project takes over a shared file; sync skips i
 majles lint                   check the research, ADR, size and main-branch rules
 majles placeholders           list the setup placeholders left in the project's files
 majles check                  what the session-start hook runs; quiet unless there is news
+majles board                  check what the board needs, and turn it on
+majles board --off            go without the board on purpose; the session line shows weekly
 majles research-find <words>  search earlier research in every project under the root
 majles adopt                  bring an existing project in
 majles migrate                move a project made under an earlier name onto Majles

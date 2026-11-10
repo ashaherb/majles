@@ -73,16 +73,27 @@ example:
 
 The more the description says, the fewer questions follow.
 
-### 4. Answer one batch of questions
+### 4. Answer five short rounds of questions
 
 Claude follows `SETUP.md`, in order:
 
-1. It fills what it can from your description, then asks **one batch** of
-   questions for the rest: the name, who it is for, what must never be
-   compromised, what the first version must do, what is out of scope,
-   which languages, whether it calls an AI model, and whether it involves
-   minors, payments, or health or financial data. It does not ask what you
-   already said.
+1. It interviews you in **five short rounds**, each headed "Round N of 5":
+   - **the idea:** what it is, who it is for, why it should exist, its name;
+   - **the product:** the one thing a user does, what the first version must
+     do, what is out of scope, the number that says it is working;
+   - **the limits:** what must never be compromised, your team, budget and
+     timeline, whether it involves minors, payments, or health or financial
+     data, and the hardest technical question;
+   - **the shape:** languages, whether it has a screen, content or an AI
+     model, anything already made, and whether you want the board;
+   - **the setup facts:** the repo name and the GitHub account that owns it.
+
+   Each round first shows what Claude already understood from your
+   description, for you to correct, then asks at most four questions, as
+   choices where the answers are obvious. It does not ask what you already
+   said. It asks a follow-up only when an answer is too vague to check, when
+   two answers contradict, or when a wrong guess would be costly, and it says
+   which. Then it shows one summary, and writes nothing until you confirm it.
 2. It writes your own words, quoted and dated, in `docs/direction.md`. A rule
    Claude drafted for you is marked "drafted", and never becomes a gate without
    your yes.

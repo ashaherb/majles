@@ -229,3 +229,32 @@ git directory there is nowhere to keep the last date, so the line shows every se
 from the seventh day after the no; a stamp that cannot be read counts from the no; a
 date that does not parse makes the line show every session. Too loud is the safe
 failure. `majles board` deletes the no once `bd` is there.
+
+## 14. Setup interviews in five rounds, and follows up only for a reason
+
+Problem. Setup filled what it could from the description, then asked one batch of up to
+20 questions, then at most two at a time (issue #55). A batch that size is hard to
+answer well, and setup never showed what it had understood, so a wrong guess went
+straight into the files. The maintainer, on 2026-11-10: "For Majles, I want the initial
+setup to be more structured. It should ask followup questions if it needs".
+
+Choice. Step 1 of `SETUP.md` is five short rounds, each headed "Round N of 5": the idea,
+the product, the limits, the shape, the setup facts. Each round first shows what setup
+understood from the description, for the developer to correct, then asks at most four
+questions, as choices with Claude Code's question tool where the answers are obvious.
+Every one of the 20 questions lands in exactly one round; where a round had more than
+four, related ones are asked as one (standing constraints with the team and budget; the
+interface, content and AI with one multiple choice). The setup facts round adds one
+question that step 4 used to settle on its own: which GitHub account owns the repo and
+which address commits. A follow-up is asked only when an answer is vague or
+uncheckable, when two answers contradict, or when a wrong guess would be costly, and
+setup says which; an answer still unsure after one follow-up becomes a labelled working
+assumption. One summary comes last, and nothing is written until the developer confirms
+it. Keeping the single batch and only adding the summary was the alternative: shorter,
+and still a wall of questions.
+
+**Consequence:** setup takes five exchanges at least, even for a full description, since
+each round shows its understanding before going on. Tests keep the rounds at five, each
+at most four questions, each of the 20 questions in exactly one round, and each
+placeholder the interview fills in exactly one round. `asking.md` is unchanged: its
+"at most two at a time" is for the team after setup, and setup's follow-ups keep it.

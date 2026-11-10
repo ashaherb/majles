@@ -149,6 +149,55 @@ class SetupGuide(unittest.TestCase):
         guide = text("template/SETUP.md")
         return guide.split(f"\n## {heading}\n", 1)[1].split("\n## ", 1)[0]
 
+    ROUNDS = ["the idea", "the product", "the limits", "the shape", "the setup facts"]
+    FILLED_LATER = {"GIT_REMOTE", "DECISION_LOG_URL", "STATUS_PAGE_URL"}  # steps 4 and 5
+
+    def rounds(self):
+        """{round name: [(question numbers, fills cell), ...]}, one entry per table row."""
+        interview = self.section("1. Interview")
+        parts = re.split(r"^### Round (\d) of 5: (.+)$", interview, flags=re.M)
+        self.assertEqual(parts[1::3], ["1", "2", "3", "4", "5"])
+        found = {}
+        for name, body in zip(parts[2::3], parts[3::3]):
+            body = body.split("\n### ", 1)[0]
+            rows = [line.strip("|").split("|") for line in body.splitlines()
+                    if line.startswith("| ") and not line.startswith("| # ")]
+            found[name] = [([int(n) for n in cells[0].split(",")], cells[-1]) for cells in rows]
+        return found
+
+    def test_the_interview_is_five_rounds_of_at_most_four_questions(self):
+        # Issue #55: one batch of up to 20 questions became five short rounds.
+        rounds = self.rounds()
+        self.assertEqual(list(rounds), self.ROUNDS)
+        for name, rows in rounds.items():
+            self.assertTrue(1 <= len(rows) <= 4, f"{name} asks {len(rows)} questions")
+        numbers = sorted(n for rows in rounds.values() for nums, _ in rows for n in nums)
+        self.assertEqual([n for n in numbers if n <= 20], list(range(1, 21)),
+                         "each of the original 20 questions lands in exactly one round")
+
+    def test_every_placeholder_the_interview_fills_is_in_exactly_one_round(self):
+        where = {}
+        for name, rows in self.rounds().items():
+            for _, fills in rows:
+                for placeholder in set(re.findall(r"`([A-Z][A-Z_]+)`", fills)):
+                    where.setdefault(placeholder, []).append(name)
+        twice = {p: r for p, r in where.items() if len(r) > 1}
+        self.assertFalse(twice, f"filled in more than one round: {twice}")
+        shipped = {name for _, _, src, _ in ENTRIES for name in PLACEHOLDER.findall(text(src))}
+        missing = sorted(shipped - EXAMPLES - self.FILLED_LATER - set(where))
+        self.assertFalse(missing, f"no round fills: {missing}")
+
+    def test_follow_ups_name_their_trigger_and_the_summary_comes_first(self):
+        interview = self.section("1. Interview")
+        follow = interview.split("### Follow-up questions", 1)[1].split("\n### ", 1)[0]
+        for trigger in ("**Vague:**", "**Contradiction:**", "**Costly guess:**", "say which one"):
+            self.assertIn(trigger, follow)
+        summary = interview.split("### The summary", 1)[1]
+        self.assertLess(summary.index("Write nothing"), summary.index("docs/direction.md"))
+        self.assertIn('marked "drafted"', " ".join(summary.split()))
+        board = next(fills for rows in self.rounds().values() for nums, fills in rows if 20 in nums)
+        self.assertIn("step 4b", board)
+
     def test_it_names_the_file_adopt_writes_beside_claude_md(self):
         # Issue #4: setup merges the template adopt wrote beside the project's CLAUDE.md.
         self.assertIn(f"`{bp.CLAUDE_BESIDE}`", text("template/SETUP.md"))

@@ -9,7 +9,8 @@ Otherwise, this project was just created from the Majles template and is not set
 up yet. Before any other work, follow `SETUP.md` in this project. In short:
 
 1. Get the project description from the developer.
-2. Fill every `{{PLACEHOLDER}}` you can derive. Ask for the rest in one batch.
+2. Interview them in five short rounds, confirm one summary, then fill every
+   `{{PLACEHOLDER}}`.
 3. Turn modules on or off with `majles`.
 4. Create the repo, unless the project was adopted and has one.
 5. Publish the decision log.

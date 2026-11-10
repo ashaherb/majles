@@ -15,9 +15,11 @@ The first public release. (On PyPI, 0.0.1 is only a placeholder that reserves th
 - **Working rules with their reasons**, in `.claude/rules/`: research only what blocks
   the next step, record each decision in one place, keep pull requests reviewable, and
   never call work done until someone has used it as the user would.
-- **A setup guide**, `SETUP.md`: say "set up this project", answer one batch of
-  questions, and Claude fills in the project, creates a private GitHub repo, turns on a
-  guard against pushes to `main`, and publishes the decision log.
+- **A setup guide**, `SETUP.md`: say "set up this project", answer five short rounds
+  of questions (the idea, the product, the limits, the shape, the setup facts), each
+  showing what Claude already understood, confirm one summary, and Claude fills in the
+  project, creates a private GitHub repo, turns on a guard against pushes to `main`,
+  and publishes the decision log.
 - **Modules** you turn on or off: `ui`, `beads` (a local work queue and board), `i18n`,
   `content`, `ai` and `legal`.
 - **The board is never off quietly.** If `bd`, Node 22 or the board view is missing,

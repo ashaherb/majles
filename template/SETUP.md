@@ -18,33 +18,111 @@ Follow it in order. The last step deletes this file.
 
 ## 1. Interview
 
-From the developer's description, fill as many of the answers below as can be
-derived. Then ask **one batch** of questions: for what is missing, and for
-anything guessed where a wrong guess would be costly. Never ask for what the
-description already says.
+The interview is five short rounds, in this order, then one summary. Nothing is
+written to a file until the developer has confirmed the summary.
+
+**Every round goes the same way.** Open it with its heading, as below, and say
+which round it is ("Round 2 of 5: the product"). Then:
+
+1. **Show what you already understood** for this round, from the developer's
+   description (and, in an adopted project, its old `CLAUDE.md`), in a few short
+   lines, for them to correct. Mark each as what they said or what you guessed.
+2. **Ask at most four questions**, only for what is still missing, and for any
+   guess where a wrong guess would be costly. Never ask for what the
+   description already says. Where a question has an obvious set of answers
+   (yes or no, a default to accept, a short list), ask it as a choice with
+   Claude Code's question tool (`AskUserQuestion`), whose "Other" lets the
+   developer answer in their own words; ask the rest in plain text. Where the
+   session has no question tool, ask all of them in plain text, numbered. If a
+   round has nothing left to ask, its one question is whether what you
+   understood is right.
+3. **Follow up** only when one of the three triggers below holds, then go on to
+   the next round.
+
+Each row below is one question. The numbers are the interview's questions; a row
+with several numbers asks them together, as one question.
+
+### Round 1 of 5: the idea
 
 | # | Question | Fills |
 |---|---|---|
 | 1 | What is it, in a paragraph? | `ONE_PARAGRAPH_DESCRIPTION` |
-| 2 | What is it called, and is the name settled? | `PROJECT_NAME`, `NAME_STATUS`, and the name rule in `constraints.md` |
-| 3 | Directory and repo name? Default: the slug given to `majles new` | `REPO_SLUG` |
-| 4 | The one-line thesis: why it should exist, and what it refuses to be? | `THESIS` |
 | 5 | Who is it for? What do they know, how do they arrive, how long do they give it? | `WHO_IT_IS_FOR` |
-| 6 | What must never be compromised? | `NON_NEGOTIABLES`, each marked as the developer's words or drafted |
+| 4 | The one-line thesis: why it should exist, and what it refuses to be? | `THESIS` |
+| 2 | What is it called, and is the name settled? A choice: settled, or a working name | `PROJECT_NAME`, `NAME_STATUS`, and the name rule in `constraints.md` |
+
+### Round 2 of 5: the product
+
+| # | Question | Fills |
+|---|---|---|
 | 7 | What is the core loop, the one thing a user does? | `CORE_LOOP`, `CORE_FLOWS` |
 | 8 | What must the MVP do? | `MVP_MUST_DO` |
 | 9 | What is out of scope, but must stay possible later? | `OUT_OF_SCOPE_BUT_KEEP_POSSIBLE` |
-| 10 | Constraints: team, skills, budget, timeline, what you want to learn? | `CONSTRAINTS` |
 | 11 | What single number says it is working? | `SUCCESS_METRIC` |
+
+### Round 3 of 5: the limits
+
+| # | Question | Fills |
+|---|---|---|
+| 6 | What must never be compromised? | `NON_NEGOTIABLES`, each marked as the developer's words or drafted |
+| 10, 19 | Constraints: team, skills, budget, timeline, what you want to learn; and any other standing rule every agent must respect? | `CONSTRAINTS`; `CONSTRAINT_TITLE`, `CONSTRAINT_BODY` and `CONSTRAINT_WHY` in `constraints.md`, one section per standing rule |
+| 18 | Are any users minors, or does it take payments, handle health or financial data, or serve a regulated client? A choice, several allowed, or none | the legal module |
 | 12 | What is the hardest technical question it poses? | `HARDEST_TECHNICAL_QUESTION` |
-| 13 | Which languages? Is any right-to-left? | `LANGUAGES`; more than one language turns on the i18n module |
-| 14 | Is the content itself the product: articles, templates, courses, skills? | the content module: `CONTENT_UNIT`, `CONTENT_FORMAT`, `CONTENT_HARD_RULES`, `EDITORIAL_STANDARD` |
-| 15 | Does it have a visual interface? | whether the ui module stays on |
+
+### Round 4 of 5: the shape
+
+| # | Question | Fills |
+|---|---|---|
+| 13 | Which languages? Is any right-to-left? A choice, with the language of the description first | `LANGUAGES`; more than one language turns on the i18n module |
+| 15, 14, 17 | Which of these does it have: a visual interface; content that is itself the product (articles, templates, courses, skills); an AI model it calls while it runs? A choice, several allowed, or none | whether the ui module stays on (15); the content module (14), with `CONTENT_UNIT`, `CONTENT_FORMAT`, `CONTENT_HARD_RULES` and `EDITORIAL_STANDARD` taken from the answers or written as working assumptions; the ai module (17) |
 | 16 | Anything already made (drafts, designs, specs) to treat as input? | `EXISTING_MATERIAL` and `EXISTING_MATERIAL_PATH` in `constraints.md` |
-| 17 | Does it call an AI model while it runs? | the ai module |
-| 18 | Are any users minors, or does it take payments, handle health or financial data, or serve a regulated client? | the legal module |
-| 19 | Any other standing constraints every agent must respect? | `CONSTRAINT_TITLE`, `CONSTRAINT_BODY` and `CONSTRAINT_WHY` in `constraints.md`, one section per constraint |
-| 20 | Do you want a shared work queue with a local board, so agents and sessions claim work and post progress? Default: yes | whether the beads module stays on |
+| 20 | A shared work queue with a local board, so agents and sessions claim work and post progress? A choice: yes (the default), or not now | whether the beads module stays on; a no goes to step 4b, never straight to `majles disable beads` |
+
+A no to question 20 is not acted on here. Step 4b tells the developer what the
+board gives them, and that `majles board` turns it on later, before it honours
+the no.
+
+### Round 5 of 5: the setup facts
+
+Show what this machine already says: the slug given to `majles new` (or, in an
+adopted project, the `origin` remote), `gh auth status`, and
+`git config user.email`.
+
+| # | Question | Fills |
+|---|---|---|
+| 3 | Directory and repo name? Default: the slug given to `majles new` | `REPO_SLUG` |
+| 21 | Which GitHub account owns the repo, and which address do you commit with? A choice: the active `gh` account and the current email, or others. The repo is private unless you say otherwise | the owner in step 4, `GIT_EMAIL`, `GH_ACCOUNT` and `REPO_VISIBILITY` in `git-account.md` |
+
+### Follow-up questions
+
+Ask a follow-up only for one of three reasons, and say which one in the
+question:
+
+- **Vague:** the answer cannot be checked. Asked who it is for, the developer
+  says "runners". "That is too vague to check: who uses it in its first month,
+  and how do they find it?"
+- **Contradiction:** two answers disagree. Round 2 says members see which runs
+  they went to; round 3 says no accounts. "These two contradict: tracking who
+  went needs some kind of account. Which one gives way?"
+- **Costly guess:** a wrong guess would be expensive to undo. The active `gh`
+  account looks like a work account. "A wrong guess here is costly, because a
+  repo made under the wrong owner is hard to move: which account should own
+  it?"
+
+Ask at most two follow-ups at a time. If an answer is still unsure after one
+follow-up, write the working assumption and label it as one; do not ask again.
+
+### The summary
+
+After round 5, show one summary and ask the developer to confirm or correct it.
+It lists every answer, grouped by round, each marked as the developer's words,
+taken from the description, or a working assumption; the non-negotiables, each
+marked as theirs or drafted; the modules that will be turned on and off; and the
+repo that will be created, with its owner and visibility. Apply any correction
+and show the changed lines again. Write nothing, not even `docs/direction.md`,
+until they confirm.
+
+### Then record it
 
 Write every answer in the developer's terms, specific and checkable. A vague
 thesis or audience makes every agent downstream worse. Where the developer is
@@ -53,8 +131,7 @@ unsure, write the working assumption and label it as one.
 Record what the developer actually said, quoted and dated, in
 `docs/direction.md`. A non-negotiable the developer stated links to its entry;
 one you drafted from their description is marked "drafted", and never becomes a
-gate without their yes (`.claude/rules/asking.md`). Ask at most two questions
-at a time beyond the first batch.
+gate without their yes (`.claude/rules/asking.md`).
 
 ## 2. Fill the placeholders
 
@@ -112,15 +189,16 @@ existing `origin`.
 
 1. `git init -b main`, and set `git config user.email` to the address the
    developer commits with.
-2. Check `gh auth status`, and that the active account is the one that should
-   own the repo.
+2. Check `gh auth status`, and that the active account is the one round 5
+   named as the owner.
 3. `gh repo create <owner>/<slug> --private`, then add the remote it prints
    as `origin`.
-4. Fill `.claude/rules/git-account.md`: `GIT_REMOTE` (the `origin` URL),
-   `GIT_EMAIL` (the commit address), `GH_ACCOUNT` (how a writing `gh` command
-   runs, for example plain `gh` or `GH_TOKEN=$(gh auth token --user <owner>) gh`
-   when the machine has several accounts), and `REPO_VISIBILITY` (`private`
-   unless the developer says otherwise).
+4. Fill `.claude/rules/git-account.md` from round 5's answers: `GIT_REMOTE`
+   (the `origin` URL), `GIT_EMAIL` (the commit address), `GH_ACCOUNT` (how a
+   writing `gh` command runs, for example plain `gh` or
+   `GH_TOKEN=$(gh auth token --user <owner>) gh` when the machine has several
+   accounts), and `REPO_VISIBILITY` (`private` unless the developer said
+   otherwise).
 5. Turn on the guard that keeps `main` for merged pull requests:
    `git config core.hooksPath .githooks`. Every later clone needs it too;
    `majles lint` reports one that does not.
@@ -141,7 +219,7 @@ here talks to a hosted service.
 - Node 22 or later, which the board view runs on.
 - beads-ui (`bdui`), the board view.
 
-If the developer said no to the queue in step 1, tell them in one line what
+If the developer said no to the queue in round 4, tell them in one line what
 they give up (the opening of this section), and that `majles board` turns it on
 later. If they still say no, do as "Continue without the board" says below for
 a missing `bd`. Otherwise run:

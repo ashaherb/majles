@@ -26,8 +26,9 @@ slug or the path's last part, must be lowercase letters and digits with single
 hyphens between words; `new` refuses anything else before it writes a file.
 
 Then say **"set up this project"** and describe it, in as much or as little
-detail as you have. Claude fills in what it can from what you said, asks one
-batch of questions for the rest, and does the setup below.
+detail as you have. Claude shows what it understood from what you said, asks
+for the rest in five short rounds, confirms one summary with you, and does the
+setup below.
 
 `majles new` copies only what a project ships with. This file, `majles/`
 and `optional/` stay here. It also writes `.majles.json`, which records what

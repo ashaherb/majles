@@ -94,7 +94,8 @@ majles sync --apply        # moves the renamed rule to .claude/rules/majles.md
 ## Checking research and ADRs
 
 ```bash
-majles lint [project]              # read only; exit 0 when clean, 1 otherwise
+majles lint [project] [--strict]   # read only; exit 0 when clean, 1 otherwise
+majles assumptions [project]       # the register, by status, with each open one's age
 majles research-find <words...>    # earlier research in every project, newest first
 ```
 
@@ -109,6 +110,20 @@ and stays under 16 KB, with no rule over 5 KB, since both go with every agent
 call. And in a clone with `.githooks/pre-push`, `core.hooksPath` points at it. Completed research is
 only checked for its `decision.md`, so a project that predates these rules is
 not flooded with findings about work already done.
+
+`lint` also traces each limit to its source (`.claude/rules/assumptions.md`,
+`DECISIONS.md` entry 15). A cited `A-N` must be an entry in `docs/assumptions.md`
+that is not lifted, and each entry needs `Status:` (assumed, confirmed or lifted),
+`Assumed by:` with a date, `Why:`, `Costs the user:`, `Enforced in:` and
+`To lift:`, plus `Decided: d-N` once confirmed or lifted; anything else fails.
+Two things only warn, and fail under `--strict`: a paragraph, list item or table
+row that says "never", "must", "only" or "at most" and cites no `d-N` or `A-N`,
+in a rule the project wrote, an ADR or a spec; and an `ASSUMPTION(` marker with
+no `A-N`. Code fences, headings and `**Why:**` paragraphs are skipped; so are
+Majles's shared rules, and limits altogether while `SETUP.md` is there. Markers
+are found with `git grep` over files git tracks or would track, leaving out
+Markdown and `.claude/`. The heuristic is four words on purpose: a false alarm
+costs one citation, and a cleverer one would be harder to predict.
 
 The session-start hook runs `lint` too, and adds one line to its notice when it
 finds anything. Existing projects get this without changing their settings,
@@ -125,6 +140,10 @@ beads module on once `bd` is there. It exits 0 only when the whole board works.
 lock (entry 13); with it, the line shows once every 7 days. The date it last showed
 is `majles-board-notice` in the git directory, shared by worktrees and never in the
 working tree. `majles board` deletes the no once `bd` is there.
+
+The notice also lists every assumption still `assumed` in `docs/assumptions.md`,
+oldest first with its age in days, at most five by name and the rest as a count.
+It reads only that file.
 `BD_VERSION` and `QUEUE_SETUP` in `cli.py` must match `template/SETUP.md`; a test
 in `test_template.py` fails when they drift.
 
@@ -163,7 +182,8 @@ template `CLAUDE.md` points a new session at it, and setup deletes it when done.
 ```
 MAINTAINING.md            this guide; stays here
 majles/cli.py             new, adopt, enable, disable, sync, check, board,
-                          detach, lint, research-find, migrate; `python3 -m majles`
+                          detach, lint, assumptions, research-find, migrate;
+                          `python3 -m majles`
 majles/manifest.txt       every shipped file, as shared or once, by module
 majles/test_*.py          tests for the CLI, and checks on the template itself
 .githooks/pre-push        refuses pushes to main, then runs pre-push.local
@@ -178,14 +198,15 @@ pyproject.toml, setup.py  the package; setup.py copies the manifest's files into
 CHANGELOG.md              what changes in a project at each release
 .claude/agents/           architect, product, designer, builder, tester, critic,
                           security, ops, researcher
-.claude/rules/            decisions, done, asking, tokens, code-organization,
-                          ownership, research, agents, working-style, git,
-                          majles (shared); constraints, git-account (template)
+.claude/rules/            decisions, done, asking, assumptions, tokens,
+                          code-organization, ownership, research, agents,
+                          working-style, git, majles (shared); constraints,
+                          git-account (template)
 .claude/settings.json     template: the fallback model, the read-deny for secret
                           files, and the update-notice hook
 docs/                     adr, specs, reviews, security, research and status, each
-                          with its README; research/backlog.md and direction.md
-                          (templates)
+                          with its README; research/backlog.md, direction.md and
+                          assumptions.md (templates)
 ops/                      deployment, monitoring, backups and runbooks (ops)
 design/                   the design system, once researched (ui module)
 plan/                     the developer's business plan

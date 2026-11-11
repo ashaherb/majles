@@ -126,7 +126,9 @@ until they confirm.
 
 Write every answer in the developer's terms, specific and checkable. A vague
 thesis or audience makes every agent downstream worse. Where the developer is
-unsure, write the working assumption and label it as one.
+unsure, write the working assumption and label it as one; a working assumption
+that limits anything (never, must, only, at most) also gets an entry in
+`docs/assumptions.md`, `Assumed by: setup` (`.claude/rules/assumptions.md`).
 
 Record what the developer actually said, quoted and dated, in
 `docs/direction.md`. A non-negotiable the developer stated links to its entry;
@@ -158,7 +160,9 @@ is on. Never put project facts in a shared file. Sync would overwrite them.
   and RTL ADR goes under slice 1, `Needed by: slice 1`." Every screen is built
   on it.
 - In `constraints.md`, delete every section that does not apply, including
-  its italic "keep only if" note.
+  its italic "keep only if" note. Each section kept cites where it came from:
+  the developer's entry (`docs/direction.md#d-N`), or its `A-N` in
+  `docs/assumptions.md`. `majles lint` reports a limit that cites neither.
 
 ## 3. Modules
 

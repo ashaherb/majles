@@ -1103,6 +1103,150 @@ class Lint(Base):
         self.assertEqual(len(self.lint()), 1)
 
 
+def entry(n, status="assumed", day="2026-11-01", decided=None, limit="Uploads are at most 5 MB"):
+    lines = [f"## A-{n}. {limit}", "", f"Status: {status}", f"Assumed by: builder, {day}",
+             "Why: the host's free tier.", "Costs the user: no large photos.",
+             "Enforced in: `src/upload.py`", "To lift: raise the cap in `src/upload.py`."]
+    return "\n".join(lines + ([f"Decided: {decided}"] if decided else [])) + "\n\n"
+
+
+class Assumptions(Base):
+    TODAY = datetime.date(2026, 11, 11)
+
+    def setUp(self):
+        super().setUp()
+        board_works(self)
+
+    def write(self, rel, text):
+        p = self.project / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(text)
+
+    def register(self, *entries):
+        self.write(bp.REGISTER, "# What we assumed for you\n\n```markdown\n## A-1. An example\n```\n\n"
+                   + "".join(entries))
+
+    def test_a_new_project_has_nothing_to_trace(self):
+        self.assertEqual(bp.trace(self.project), ([], []))
+        self.assertIsNone(bp.assumptions_notice(self.project))
+
+    def test_the_register_reads_entries_but_not_the_format_example(self):
+        self.register(entry(1), entry(2, "confirmed", decided="d-4"))
+        got = [(e["id"], e["status"], e["limit"]) for e in bp.register(self.project)]
+        self.assertEqual(got, [("A-1", "assumed", "Uploads are at most 5 MB"),
+                               ("A-2", "confirmed", "Uploads are at most 5 MB")])
+        self.assertEqual(bp.trace(self.project), ([], []))
+
+    def test_a_malformed_entry_is_a_finding(self):
+        self.register(entry(1, status="maybe"), entry(1, day="soon"), entry(3, "lifted"),
+                      "## A-4. Bare\n\nStatus: assumed\n")
+        found = "\n".join(bp.lint(self.project))
+        self.assertIn("A-1: `Status: maybe` must be one of assumed, confirmed, lifted", found)
+        self.assertIn("A-1 is used twice", found)
+        self.assertIn("A-1: `Assumed by:` needs the date", found)
+        self.assertIn("A-3 is lifted with no `Decided: d-N`", found)
+        self.assertIn("A-4 has no `Costs the user:` line", found)
+
+    def test_a_limit_with_no_source_warns_and_fails_only_when_strict(self):
+        self.write("docs/specs/upload.md", "# Upload\n\nA photo is at most 5 MB.\n")
+        found, warnings = bp.trace(self.project)
+        self.assertEqual(found, [])
+        self.assertEqual(len(warnings), 1)
+        self.assertTrue(warnings[0].startswith('docs/specs/upload.md:3: "at most" cites no d-N or A-N'), warnings)
+        self.assertEqual(bp.lint(self.project), [])
+        self.assertEqual(bp.lint(self.project, strict=True), warnings)
+        code, out = quiet(bp.cmd_lint, self.project)
+        self.assertEqual(code, 0)
+        self.assertIn("warning: docs/specs/upload.md:3", out)
+        self.assertEqual(quiet(bp.cmd_lint, self.project, True)[0], 1)
+
+    def test_a_cited_limit_passes(self):
+        self.register(entry(1))
+        self.write("docs/adr/0001-a.md", "# 0001. A\n\nUploads are at most 5 MB (A-1).\n\n"
+                   "- Never store a card number ([d-2](../direction.md#d-2)).\n")
+        self.assertEqual(bp.trace(self.project), ([], []))
+
+    def test_each_list_item_and_table_row_needs_its_own_source(self):
+        self.write(".claude/rules/constraints.md", "# C\n\n- Never X (d-1).\n- Only Y.\n\n"
+                   "| a | b |\n|---|---|\n| never Z | d-3 |\n| only W | |\n")
+        warnings = bp.trace(self.project)[1]
+        self.assertEqual([w.split(":")[1] for w in warnings], ["4", "9"])
+
+    def test_code_headings_and_why_paragraphs_are_not_limits(self):
+        self.write("docs/specs/a.md", "# Never mind\n\n```\nnever = 1\n```\n\n"
+                   "**Why:** an earlier project never had one.\n")
+        self.assertEqual(bp.trace(self.project), ([], []))
+
+    def test_majles_shared_rules_are_not_traced_but_a_detached_one_is(self):
+        self.write(".claude/rules/shared.md", "# S\n\nAgents never push to main.\n")
+        lock = self.lock()
+        lock["files"][".claude/rules/shared.md"] = "x"
+        (self.project / bp.LOCK).write_text(json.dumps(lock))
+        self.assertEqual(bp.trace(self.project), ([], []))
+        del lock["files"][".claude/rules/shared.md"]
+        (self.project / bp.LOCK).write_text(json.dumps(lock))
+        self.assertEqual(len(bp.trace(self.project)[1]), 1)
+
+    def test_an_id_missing_or_lifted_fails_even_during_setup(self):
+        self.write("SETUP.md", "setup\n")
+        self.register(entry(1, "lifted", decided="d-5"))
+        self.write("docs/specs/a.md", "# A\n\nOnly cards (A-1). At most two (A-7). Never cash.\n")
+        found, warnings = bp.trace(self.project)
+        self.assertEqual(found, ["docs/specs/a.md:3: cites A-1, which was lifted; remove the limit here",
+                                 "docs/specs/a.md:3: cites A-7, which is not in docs/assumptions.md"])
+        self.assertEqual(warnings, [], "limits are not traced while setup runs")
+
+    def test_markers_in_code_carry_an_id(self):
+        run("git", "init", "-q", cwd=self.project)
+        self.register(entry(1))
+        self.write("src/upload.py", "# ASSUMPTION(A-1: free tier)\n# ASSUMPTION(no id)\n"
+                   "# ASSUMPTION(A-9: gone)\n")
+        self.write("docs/notes.md", "ASSUMPTION(prose, not code)\n")
+        found, warnings = bp.trace(self.project)
+        self.assertEqual(found, ["src/upload.py:3: cites A-9, which is not in docs/assumptions.md"])
+        self.assertEqual(warnings, ["src/upload.py:2: ASSUMPTION( with no id: write ASSUMPTION(A-N: why)"])
+
+    def test_the_notice_names_the_open_ones_with_their_age(self):
+        self.register(entry(1, day="2026-11-01"), entry(2, "confirmed", decided="d-1"),
+                      *[entry(n, day="2026-11-10") for n in range(3, 9)])
+        msg = bp.assumptions_notice(self.project, self.TODAY)
+        lines = msg.splitlines()
+        self.assertTrue(lines[0].startswith("7 assumptions the developer has not confirmed or lifted"))
+        self.assertEqual(lines[1], "  A-1, 10 days: Uploads are at most 5 MB")
+        self.assertEqual(lines[2], "  A-3, 1 day: Uploads are at most 5 MB")
+        self.assertEqual(lines[-2:], ["  and 2 more", "List them: majles assumptions"])
+
+    def test_check_carries_the_notice(self):
+        self.register(entry(1))
+        msg = json.loads(quiet(bp.cmd_check, self.bp, self.project)[1])["systemMessage"]
+        self.assertIn("A-1, ", msg)
+
+    def test_the_lint_notice_counts_limits_with_no_source(self):
+        self.write("docs/specs/a.md", "# A\n\nNever cash.\n\nOnly cards.\n")
+        self.assertEqual(bp.lint_notice(self.project), "Lint: 2 limits with no source. Run: majles lint")
+
+    def test_the_command_lists_them_by_status(self):
+        self.register(entry(1), entry(2, "confirmed", decided="d-4"), entry(3, "lifted", decided="d-6"),
+                      entry(4, "maybe"))
+        code, out = quiet(bp.cmd_assumptions, self.project, self.TODAY)
+        self.assertEqual(code, 0)
+        self.assertEqual(out.splitlines(), [
+            "Assumed, waiting for the developer (1)", "  A-1  10 days  Uploads are at most 5 MB",
+            "Confirmed by the developer (1)", "  A-2  d-4  Uploads are at most 5 MB",
+            "Lifted (1)", "  A-3  d-6  Uploads are at most 5 MB",
+            "No valid status (see majles lint) (1)", "  A-4  not decided  Uploads are at most 5 MB"])
+
+    def test_the_command_with_no_register(self):
+        self.assertIn("nothing assumed yet", quiet(bp.cmd_assumptions, self.project)[1])
+
+    def test_main_routes_lint_strict_and_assumptions(self):
+        self.write("docs/specs/a.md", "# A\n\nNever cash.\n")
+        with mock.patch("sys.stdout", io.StringIO()):
+            self.assertEqual(bp.main(["lint", str(self.project)]), 0)
+            self.assertEqual(bp.main(["lint", "--strict", str(self.project)]), 1)
+            self.assertEqual(bp.main(["assumptions", str(self.project)]), 0)
+
+
 class Hooks(Base):
     def test_a_synced_hook_is_executable(self):
         self.put("majles/manifest.txt", MANIFEST + "\n[core]\nshared .githooks/pre-push\n", commit=False)

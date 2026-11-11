@@ -84,6 +84,49 @@ A new fact.
                 rd.render_adr(p)
 
 
+class Assumptions(unittest.TestCase):
+    REGISTER = """# What we assumed for you
+
+```markdown
+## A-N. The format example
+Status: assumed
+```
+
+## A-1. Uploads are at most 5 MB
+
+Status: lifted
+Costs the user: no large photos.
+Decided: d-3
+
+## A-2. Never <b>cash</b>
+
+Status: Assumed
+Assumed by: builder, 2026-11-01
+To lift: remove the check in `pay.py`.
+"""
+
+    def render(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = pathlib.Path(d) / "assumptions.md"
+            p.write_text(self.REGISTER, encoding="utf-8")
+            return rd.assumptions(p), rd.render_assumptions(p)
+
+    def test_entries_skip_the_format_example(self):
+        entries = self.render()[0]
+        self.assertEqual([(e["id"], e["Status"]) for e in entries], [("A-1", "lifted"), ("A-2", "assumed")])
+
+    def test_open_ones_first_escaped_with_their_fields(self):
+        out = self.render()[1]
+        self.assertLess(out.index("A-2"), out.index("A-1"))
+        self.assertIn('<article class="assumption assumed">', out)
+        self.assertIn("Never &lt;b&gt;cash&lt;/b&gt;", out)
+        self.assertIn("<dt>To lift</dt><dd>remove the check in <code>pay.py</code>.</dd>", out)
+        self.assertIn("<dt>Decided</dt><dd>d-3</dd>", out)
+
+    def test_no_register_renders_nothing(self):
+        self.assertEqual(rd.render_assumptions(pathlib.Path("/nonexistent/assumptions.md")), "")
+
+
 class RealRepo(unittest.TestCase):
     def test_every_adr_in_the_repo_renders(self):
         for f in sorted(rd.ADR_DIR.glob("[0-9][0-9][0-9][0-9]-*.md")):
@@ -107,6 +150,7 @@ class RealRepo(unittest.TestCase):
             page = out.read_text(encoding="utf-8")
         self.assertIn(f"<title>{rd.project_name()} Decisions</title>", page)
         self.assertIn("How the team works", page)
+        self.assertIn("What we assumed for you", page)
 
 
 if __name__ == "__main__":

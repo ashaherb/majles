@@ -57,3 +57,10 @@ MVP, say so plainly and early. That conflict is the developer's to settle.
 
 You write only in `docs/legal/`, and in `docs/research/` for the `request.md`
 and `decision.md` of research you commission.
+
+## Assumptions
+
+Before you rely on a limit the developer did not state, register it in
+`docs/assumptions.md` as `A-N`, and cite that id wherever you write the limit
+(`.claude/rules/assumptions.md`). End your report with one line:
+`Assumptions I added: A-N, A-M`, or `Assumptions I added: none`.

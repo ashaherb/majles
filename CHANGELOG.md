@@ -27,6 +27,11 @@ The first public release. (On PyPI, 0.0.1 is only a placeholder that reserves th
   board is off, every session opens with one line saying so, and `majles board` checks
   what is missing and turns it on. If you say no on purpose (in setup, or with
   `majles board --off`), the line shows once a week instead.
+- **What we assumed for you.** A limit the developer did not state ("never", "must",
+  "only", "at most") is registered in `docs/assumptions.md` as `A-N` before anything
+  relies on it, cited wherever it is enforced, and brought to the developer to confirm
+  or lift. Each session lists the open ones with their age; `majles assumptions` lists
+  them all, and both rendered pages show them.
 - **Staying current:** `majles sync` previews and applies template updates without
   touching the files your project owns, and `majles lint` checks the research and ADR
   rules.
@@ -40,6 +45,17 @@ template, under this name or an earlier one. A new project needs none of it.
   "the developer" said on a date in Majles's own history; in your project that read as
   something you said. They now say "in an earlier project". `docs/direction.md` is
   still the only place your words are kept.
+- **Assumptions are registered, cited and brought to you.** Sync adds
+  `.claude/rules/assumptions.md`, adds `docs/assumptions.md` (empty, yours from then
+  on), and changes every agent definition, which now ends its report with
+  `Assumptions I added:`, and `asking.md` and `decisions.md`, which point at the new
+  rule. `majles lint` now fails on an `A-N` cited but missing from the register or
+  lifted, and warns on a "never", "must", "only" or "at most" with no `d-N` or `A-N` in
+  a rule your project wrote, an ADR or a spec, and on an `ASSUMPTION(` marker with no
+  id; `majles lint --strict` fails on those too. Expect warnings in existing specs and
+  ADRs: cite the direction entry, or register the assumption. The session notice lists
+  the open assumptions, and both rendered pages gain a "What we assumed for you"
+  section.
 - **A board that is off now says so.** With this `majles` installed, every session
   start says when the `beads` module is off, or `bd` or beads-ui is missing, until
   `majles board` lists nothing missing. Your hook already calls `majles check`, so

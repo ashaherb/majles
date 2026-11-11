@@ -12,7 +12,9 @@ exactly one of four places.
 
 The developer's own words go in `docs/direction.md`, verbatim
 (`.claude/rules/asking.md`). Records cite them; they never paraphrase them as
-the developer's.
+the developer's. A limit the team assumed, which the developer has not stated,
+goes in `docs/assumptions.md` and is cited by its `A-N`
+(`.claude/rules/assumptions.md`).
 
 **Why:** a decision that lives only in a transcript gets silently reversed next
 session. And a log that records every small thing stops being read.

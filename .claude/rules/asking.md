@@ -9,7 +9,9 @@ main session appends to it the moment the developer gives a direction.
 A record that rests on the developer's authority ("the developer wants…") links
 to its entry there. Anything else the team wrote, including what the main
 session drafted during setup, is **drafted**: it says so, the team may relax it,
-and it never becomes a gate without the developer's yes.
+and it never becomes a gate without the developer's yes. A drafted limit is
+registered in `docs/assumptions.md` before anything relies on it
+(`.claude/rules/assumptions.md`).
 
 **Why:** in an earlier project a line drafted during setup was later treated as
 its developer's own rule and rejected several options they would have taken;

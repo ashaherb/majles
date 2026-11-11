@@ -149,6 +149,8 @@ every agent automatically, and each rule is short and carries its reason:
 - `done.md`: what counts as done: the gate on the pull request, real calls,
   and a try as the user.
 - `asking.md`: the developer's words, verbatim; when to ask, and when to decide.
+- `assumptions.md`: every limit the team assumed is registered, cited, and
+  brought to the developer to confirm or lift.
 - `tokens.md`: short-lived agents, short reports, short standing text.
 - `code-organization.md`: code a person can maintain.
 - `ownership.md`: which agent writes in which directory.
@@ -165,7 +167,8 @@ every agent automatically, and each rule is short and carries its reason:
 
 Where the reasoning lives: architecture in `docs/adr/`, what the user gets in
 `docs/specs/`, choices made from research in `docs/research/`, the developer's
-own words in `docs/direction.md`, and everything above in the rules. The
+own words in `docs/direction.md`, the limits the team assumed in
+`docs/assumptions.md`, and everything above in the rules. The
 rendered decision log:
 {{DECISION_LOG_URL}}
 

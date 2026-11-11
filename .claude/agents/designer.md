@@ -65,3 +65,10 @@ Spend boldness in one place per screen. When two things on a screen compete to b
 memorable, one of them is wrong.
 
 Before you finish, remove one thing.
+
+## Assumptions
+
+Before you rely on a limit the developer did not state, register it in
+`docs/assumptions.md` as `A-N`, and cite that id wherever you write the limit
+(`.claude/rules/assumptions.md`). End your report with one line:
+`Assumptions I added: A-N, A-M`, or `Assumptions I added: none`.

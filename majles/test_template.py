@@ -560,5 +560,30 @@ class TheUsersWords(unittest.TestCase):
                     hits.append(f"{src}: {para.strip()[:80]}")
         self.assertFalse(hits, "dated or unscoped words given as the developer's:\n" + "\n".join(hits))
 
+class Assumptions(unittest.TestCase):
+    def test_every_agent_ends_its_report_with_its_assumptions(self):
+        agents = [src for _, _, src, _ in ENTRIES if "/.claude/agents/" in f"/{src}"]
+        self.assertTrue(agents)
+        missing = [a for a in agents if "`Assumptions I added:" not in text(a)]
+        self.assertFalse(missing, f"no 'Assumptions I added' line: {missing}")
+
+    def test_the_register_ships_empty_and_its_format_has_every_field_lint_checks(self):
+        root = pathlib.Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root)
+        (root / "docs").mkdir()
+        shutil.copy(ROOT / bp.REGISTER, root / bp.REGISTER)
+        self.assertEqual(bp.register(root), [], "the format example is not an entry")
+        example = text(bp.REGISTER).split("```markdown", 1)[1].split("```", 1)[0]
+        for key in bp.ENTRY_FIELDS + ("Decided",):
+            self.assertIn(f"\n{key}: ", example, key)
+        self.assertTrue(bp.ENTRY.match(example.strip().splitlines()[0].replace("A-N", "A-1")))
+
+    def test_the_shipped_text_cites_no_numbered_assumption(self):
+        # Shipped rules and docs show the id as A-N; a numbered one would be cited from a
+        # register the project does not have, and fail its lint.
+        hits = [src for _, _, src, _ in ENTRIES if src.endswith(".md") and bp.A_ID.search(text(src))]
+        self.assertFalse(hits, hits)
+
+
 if __name__ == "__main__":
     unittest.main()

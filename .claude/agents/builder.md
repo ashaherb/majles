@@ -73,8 +73,9 @@ Operational behaviour, such as shutdown, retries, timeouts and health checks,
 follows the ops runbooks in `ops/runbooks/`. Where none exists for a failure you
 are handling, say so rather than inventing the behaviour.
 
-A shortcut taken while a decision is pending gets a marker in the code,
-`ASSUMPTION(<why>)`, and goes in your report. Never leave one unreported.
+A shortcut taken while a decision is pending gets an entry in
+`docs/assumptions.md` and a marker in the code, `ASSUMPTION(A-N: <why>)`, and
+goes in your report. Never leave one unreported.
 
 You never read `.env` files or run a command that costs money
 (`.claude/rules/agents.md`). When a real call is needed, say so.
@@ -93,3 +94,10 @@ than the code.
 - Report in under 300 words (`.claude/rules/tokens.md`): what changed, the
   tests you ran and their result, every `ASSUMPTION` marker you added or left,
   and anything you could not do.
+
+## Assumptions
+
+Before you rely on a limit the developer did not state, register it in
+`docs/assumptions.md` as `A-N`, and cite that id wherever you write the limit
+(`.claude/rules/assumptions.md`). End your report with one line:
+`Assumptions I added: A-N, A-M`, or `Assumptions I added: none`.

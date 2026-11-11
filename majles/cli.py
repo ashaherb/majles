@@ -18,7 +18,10 @@ Zero dependencies. Python 3.10+. Run it from anywhere (or as `python3 -m majles`
     majles board --off [project]            record that the project goes without the board on
                                            purpose; the session notice then shows once a week
     majles detach <path> [project]          the project takes over a shared file
-    majles lint [project]                   check research, ADRs, standing-text size and the main guard
+    majles lint [project] [--strict]        check research, ADRs, standing-text size, the main guard
+                                           and where each limit came from; --strict fails on an
+                                           uncited limit too
+    majles assumptions [project]            the limits the team assumed, by status, with their age
     majles placeholders [project]           placeholders left in the files the project owns
     majles research-find <words...>         find earlier research in every project
     majles migrate [project]               move a project made before the rename onto Majles
@@ -46,9 +49,9 @@ comes from the template packaged with it, and the lock records the package
 version. An installed package holds only its own version's files, which is
 enough: sync needs the new files, and the hashes in the lock to see edits.
 
-lint and research-find read projects and change nothing. lint checks the rules
-in .claude/rules/research.md that a script can check, so they do not rest on
-prose alone.
+lint, assumptions and research-find read projects and change nothing. lint checks
+the rules in .claude/rules/research.md and .claude/rules/assumptions.md that a
+script can check, so they do not rest on prose alone.
 """
 
 import argparse
@@ -679,10 +682,12 @@ def update_notice(bp, project):
 
 
 def lint_notice(project):
-    n = len(lint(project))
-    if not n:
+    n, w = len(lint(project)), len(trace(project)[1])
+    if not n and not w:
         return None
-    return f"Lint: {n} finding{'s' if n != 1 else ''}. Run: {SELF} lint"
+    counts = [f"{n} finding{'s' if n != 1 else ''}"] if n else []
+    counts += [f"{w} limit{'s' if w != 1 else ''} with no source"] if w else []
+    return f"Lint: {', '.join(counts)}. Run: {SELF} lint"
 
 
 def cmd_check(bp, project):
@@ -697,7 +702,8 @@ def cmd_check(bp, project):
         return 0
     notices = []
     for notice in (lambda: update_notice(bp, project), lambda: lint_notice(project),
-                   lambda: migrate_notice(project), lambda: board_notice(project)):
+                   lambda: migrate_notice(project), lambda: board_notice(project),
+                   lambda: assumptions_notice(project)):
         try:
             msg = notice()
         except Exception:
@@ -713,7 +719,8 @@ def cmd_check(bp, project):
             "hookSpecificOutput": {
                 "hookEventName": "SessionStart",
                 "additionalContext": msg + "\nMention this to the developer once. Do not sync unless "
-                                           "they ask (.claude/rules/majles.md).",
+                                           "they ask (.claude/rules/majles.md). Bring open assumptions "
+                                           "to them two at a time (.claude/rules/assumptions.md).",
             },
         }))
     except Exception:
@@ -1114,8 +1121,9 @@ def lint_request(lines):
     return out
 
 
-def lint(project):
-    """Findings, one string each, for the rules a script can check.
+def lint(project, strict=False):
+    """Findings, one string each, for the rules a script can check. With strict, a limit
+    or marker that names no source is a finding too, not only a warning.
 
     A research task is open while it has request.md and no findings.md. Only open
     requests are held to the request format: completed tasks are checked only for
@@ -1164,6 +1172,8 @@ def lint(project):
                    "The status may be stale.")
     out += lint_standing(project)
     out += lint_main_guard(project)
+    found, uncited = trace(project)
+    out += found + (uncited if strict else [])
     # Before setup, placeholders are expected; after it (no setup block in CLAUDE.md), one left is a slip.
     if setup_done(project):
         out += [f"{f}: placeholder left after setup" for f in placeholders(project)]
@@ -1194,6 +1204,214 @@ def lint_main_guard(project):
         return []  # relative, or this clone's own .githooks by absolute path
     return [".githooks/pre-push is off in this clone, so nothing stops a push to main. "
             "Run: git config core.hooksPath .githooks (.claude/rules/git.md)"]
+
+
+# ---------------------------------------------------------------- assumptions
+#
+# docs/assumptions.md registers every limit the team assumed (.claude/rules/assumptions.md).
+# lint traces each limit to the developer's words (d-N) or an assumption (A-N), check names
+# the ones still open, and `majles assumptions` lists them all (DECISIONS.md, entry 15).
+
+REGISTER = "docs/assumptions.md"
+ENTRY = re.compile(r"^##\s+A-(\d+)\.?\s+(.*)$")
+A_ID = re.compile(r"\bA-\d+\b")
+D_ID = re.compile(r"\bd-\d+\b")
+DAY = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
+STATUSES = ("assumed", "confirmed", "lifted")
+ENTRY_FIELDS = ("Status", "Assumed by", "Why", "Costs the user", "Enforced in", "To lift")
+# A limit forbids, requires, caps or allows one way only. Four words find most of them; the
+# heuristic is kept this simple on purpose, and a false alarm is fixed by citing a source.
+LIMIT = re.compile(r"\b(never|must|only|at most)\b", re.I)
+MARKER = re.compile(r"ASSUMPTION\((A-\d+\b)?")
+NOTICE_NAMES = 5  # the session notice names this many open assumptions, then counts the rest
+
+
+def unfenced(lines):
+    """(line number, line) for every line, with the inside of fenced code blanked out."""
+    fence = False
+    for n, line in enumerate(lines, 1):
+        if line.lstrip().startswith("```"):
+            fence = not fence
+            yield n, ""
+        else:
+            yield n, "" if fence else line
+
+
+def register(project):
+    """The entries of docs/assumptions.md, oldest first: dicts with the id, the limit, the
+    line the entry starts on, its status and its `Key: value` lines. [] with no register."""
+    path = project / REGISTER
+    if not path.is_file():
+        return []
+    entries, current = [], None
+    for n, line in unfenced(read_lines(path)):
+        m = ENTRY.match(line)
+        if m:
+            current = {"id": f"A-{m.group(1)}", "limit": m.group(2).strip(), "line": n, "lines": []}
+            entries.append(current)
+        elif line.startswith("#"):
+            current = None
+        elif current is not None:
+            current["lines"].append(line)
+    for e in entries:
+        e["status"] = (field(e["lines"], "Status") or "").lower()
+    return entries
+
+
+def assumed_on(entry):
+    m = DAY.search(field(entry["lines"], "Assumed by") or "")
+    try:
+        return datetime.date.fromisoformat(m.group(0)) if m else None
+    except ValueError:
+        return None
+
+
+def age(entry, today):
+    since = assumed_on(entry)
+    if since is None:
+        return "age unknown"
+    days = (today - since).days
+    return f"{days} day{'s' if days != 1 else ''}"
+
+
+def lint_register(entries):
+    """What each entry of the register is missing."""
+    out, seen = [], set()
+    for e in entries:
+        where = f"{REGISTER}:{e['line']}: {e['id']}"
+        if e["id"] in seen:
+            out.append(f"{where} is used twice; give the later entry the next free number")
+        seen.add(e["id"])
+        out += [f"{where} has no `{key}:` line" for key in ENTRY_FIELDS if field(e["lines"], key) is None]
+        if e["status"] and e["status"] not in STATUSES:
+            out.append(f"{where}: `Status: {e['status']}` must be one of {', '.join(STATUSES)}")
+        if field(e["lines"], "Assumed by") is not None and assumed_on(e) is None:
+            out.append(f"{where}: `Assumed by:` needs the date, as YYYY-MM-DD")
+        if e["status"] in ("confirmed", "lifted") and not D_ID.search(field(e["lines"], "Decided") or ""):
+            out.append(f"{where} is {e['status']} with no `Decided: d-N` citing the developer's words")
+    return out
+
+
+def limit_files(project):
+    """The rules the project wrote (not Majles's shared ones, which it can detach), the
+    ADRs and the specs: where a limit is set in words."""
+    shared = set(load_lock(project).get("files", {})) if has_lock(project) else set()
+    rules = [p for p in sorted((project / ".claude" / "rules").glob("*.md"))
+             if p.relative_to(project).as_posix() not in shared]
+    adrs = sorted((project / "docs" / "adr").glob("[0-9][0-9][0-9][0-9]-*.md"))
+    specs = [p for p in sorted((project / "docs" / "specs").glob("*.md")) if p.name != "README.md"]
+    return rules + adrs + specs
+
+
+def units(lines):
+    """(line number, text) for each paragraph, list item and table row outside code. A
+    heading or a `**Why:**` paragraph explains a limit rather than sets one, so is left out."""
+    found, start, buf = [], 0, []
+    for n, line in [*unfenced(lines), (0, "")]:
+        s = line.strip()
+        if not s or s.startswith(("#", "|")) or re.match(r"([-*+]|\d+\.)\s", s):
+            if buf and not buf[0].startswith("**Why:**"):
+                found.append((start, " ".join(buf)))
+            buf = []
+            if not s or s.startswith("#"):
+                continue
+        if not buf:
+            start = n
+        buf.append(s)
+    return found
+
+
+def markers(project):
+    """(path, line number, line) for each `ASSUMPTION(` in files git tracks or would track.
+    Markdown and .claude/ only describe the marker, so they are left out."""
+    if not (project / ".git").exists():
+        return []
+    try:
+        r = subprocess.run(["git", "-C", str(project), "grep", "-n", "-I", "-F", "--untracked",
+                            "ASSUMPTION(", "--", ".", ":(exclude)*.md", ":(exclude).claude"],
+                           capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    found = []
+    for line in r.stdout.splitlines():
+        path, n, text = line.split(":", 2)
+        found.append((path, int(n), text))
+    return found
+
+
+def trace(project):
+    """(findings, warnings): where the project's limits came from.
+
+    A cited A-N that is not in the register, or was lifted, is a finding. A limit word in
+    a paragraph that cites no d-N or A-N, and a marker with no A-N, are warnings, and
+    findings under `lint --strict`. Limits are not traced while SETUP.md is still there,
+    since setup is still writing the project's own files."""
+    entries = register(project)
+    found = lint_register(entries)
+    status = {e["id"]: e["status"] for e in entries}
+    warnings = []
+
+    def cited(where, ids):
+        for i in ids:
+            if i not in status:
+                found.append(f"{where}: cites {i}, which is not in {REGISTER}")
+            elif status[i] == "lifted":
+                found.append(f"{where}: cites {i}, which was lifted; remove the limit here")
+
+    for path in limit_files(project):
+        rel, lines = path.relative_to(project).as_posix(), read_lines(path)
+        for n, line in unfenced(lines):
+            cited(f"{rel}:{n}", A_ID.findall(line))
+        if (project / SETUP_GUIDE).exists():
+            continue
+        for n, text in units(lines):
+            word = LIMIT.search(text)
+            if word and not A_ID.search(text) and not D_ID.search(text):
+                warnings.append(f"{rel}:{n}: \"{word.group(0)}\" cites no d-N or A-N: {text[:70]}")
+    for rel, n, text in markers(project):
+        for m in MARKER.finditer(text):
+            if m.group(1):
+                cited(f"{rel}:{n}", [m.group(1)])
+            else:
+                warnings.append(f"{rel}:{n}: ASSUMPTION( with no id: write ASSUMPTION(A-N: why)")
+    return found, warnings
+
+
+def assumptions_notice(project, today=None):
+    """For the SessionStart hook: the assumptions nobody has confirmed or lifted yet."""
+    waiting = [e for e in register(project) if e["status"] == "assumed"]
+    if not waiting:
+        return None
+    today = today or datetime.date.today()
+    n = len(waiting)
+    lines = [f"{n} assumption{'s' if n != 1 else ''} the developer has not confirmed or lifted "
+             f"({REGISTER}):"]
+    lines += [f"  {e['id']}, {age(e, today)}: {e['limit']}" for e in waiting[:NOTICE_NAMES]]
+    if n > NOTICE_NAMES:
+        lines.append(f"  and {n - NOTICE_NAMES} more")
+    lines.append(f"List them: {SELF} assumptions")
+    return "\n".join(lines)
+
+
+def cmd_assumptions(project, today=None):
+    if not project.is_dir():
+        raise MajlesError(f"{project} is not a directory")
+    entries = register(project)
+    if not entries:
+        print(f"{project.name}: nothing assumed yet ({REGISTER})")
+        return 0
+    today = today or datetime.date.today()
+    heads = {"assumed": "Assumed, waiting for the developer", "confirmed": "Confirmed by the developer",
+             "lifted": "Lifted"}
+    for status in (*STATUSES, None):
+        group = [e for e in entries if (e["status"] if e["status"] in STATUSES else None) == status]
+        if status is None and not group:
+            continue
+        print(f"{heads.get(status, 'No valid status (see majles lint)')} ({len(group)})")
+        for e in group:
+            when = age(e, today) if status == "assumed" else (field(e["lines"], "Decided") or "not decided")
+            print(f"  {e['id']}  {when}  {e['limit']}")
+    return 0
 
 
 SETUP_GUIDE = "SETUP.md"  # the setup procedure, shipped once; its examples are not placeholders
@@ -1245,13 +1463,16 @@ def shown(path):
         return str(path)
 
 
-def cmd_lint(project):
+def cmd_lint(project, strict=False):
     if not project.is_dir():
         raise MajlesError(f"{project} is not a directory")
-    findings = lint(project)
+    findings = lint(project, strict)
+    warnings = [] if strict else trace(project)[1]
     for f in findings:
         print(f)
-    if not findings:
+    for w in warnings:
+        print(f"warning: {w}")
+    if not findings and not warnings:
         print(f"{project.name}: clean")
     return 1 if findings else 0
 
@@ -1315,6 +1536,8 @@ def main(argv=None):
     p.add_argument("--off", action="store_true")
     p = sub.add_parser("detach"); p.add_argument("path"); p.add_argument("project", nargs="?")
     p = sub.add_parser("lint"); p.add_argument("project", nargs="?")
+    p.add_argument("--strict", action="store_true", help="fail on a limit or marker with no source")
+    p = sub.add_parser("assumptions"); p.add_argument("project", nargs="?")
     p = sub.add_parser("placeholders"); p.add_argument("project", nargs="?")
     p = sub.add_parser("research-find"); p.add_argument("words", nargs="+")
     p = sub.add_parser("migrate"); p.add_argument("project", nargs="?")
@@ -1323,7 +1546,8 @@ def main(argv=None):
     a = ap.parse_args(argv)
     root = projects_root(a.root)
     try:
-        BP = default_source() if a.cmd not in ("detach", "lint", "placeholders", "research-find", "migrate") else None
+        BP = default_source() if a.cmd not in ("detach", "lint", "placeholders", "research-find", "migrate",
+                                                 "assumptions") else None
         if a.cmd == "new":
             return cmd_new(BP, a.slug, root)
         if a.cmd == "adopt":
@@ -1346,7 +1570,9 @@ def main(argv=None):
         if a.cmd == "detach":
             return cmd_detach(resolve_project(a.project), a.path)
         if a.cmd == "lint":
-            return cmd_lint(resolve_project(a.project))
+            return cmd_lint(resolve_project(a.project), a.strict)
+        if a.cmd == "assumptions":
+            return cmd_assumptions(resolve_project(a.project))
         if a.cmd == "placeholders":
             return cmd_placeholders(resolve_project(a.project))
         if a.cmd == "research-find":

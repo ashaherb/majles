@@ -1,6 +1,6 @@
 # Standing constraints
 
-Project-specific constraints every agent must respect. They are filled in when
+Project-specific constraints for every agent. They are filled in when
 the project is set up. Delete any section that does not apply, and add one per
 real constraint.
 

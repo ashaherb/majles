@@ -6,8 +6,8 @@ Zero dependencies. Python 3.9+.
 
     python3 tools/render_decisions.py OUT.html
 
-Reads every docs/adr/NNNN-*.md, every docs/research/*/decision.md and every
-.claude/rules/*.md, and writes a single self-contained page. The repo is the source of truth: this page is only
+Reads every docs/adr/NNNN-*.md, every docs/research/*/decision.md, the
+assumptions in docs/assumptions.md and every .claude/rules/*.md, and writes a single self-contained page. The repo is the source of truth: this page is only
 ever regenerated from it, never edited by hand, so the two cannot drift.
 
 Understands the small Markdown subset the ADRs use: headings, paragraphs,
@@ -25,6 +25,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 ADR_DIR = ROOT / "docs" / "adr"
 RESEARCH_DIR = ROOT / "docs" / "research"
 RULES_DIR = ROOT / ".claude" / "rules"
+ASSUMPTIONS = ROOT / "docs" / "assumptions.md"
 README = ROOT / "README.md"
 
 
@@ -196,6 +197,54 @@ def research_decisions():
     return f'<ul class="rlist">{"".join(rows)}</ul>'
 
 
+ASSUMPTION_HEAD = re.compile(r"^##\s+(A-\d+)\.?\s+(.*)$")
+ASSUMPTION_KEYS = ("Status", "Assumed by", "Why", "Costs the user", "Enforced in", "To lift", "Decided")
+ASSUMPTION_ORDER = ("assumed", "confirmed", "lifted")  # the open ones first
+
+
+def assumptions(path=ASSUMPTIONS):
+    """The entries of docs/assumptions.md, oldest first: dicts of the id, the limit and the
+    `Key: value` lines. The format example sits in a code fence, so it is never an entry."""
+    if not path.exists():
+        return []
+    out, fence, current = [], False, None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.lstrip().startswith("```"):
+            fence = not fence
+            continue
+        if fence:
+            continue
+        m = ASSUMPTION_HEAD.match(line)
+        if m:
+            current = {"id": m.group(1), "limit": m.group(2).strip()}
+            out.append(current)
+        elif line.startswith("#"):
+            current = None
+        elif current is not None:
+            key, sep, value = line.partition(":")
+            if sep and key.strip() in ASSUMPTION_KEYS:
+                current[key.strip()] = value.strip()
+    for e in out:
+        e["Status"] = e.get("Status", "").lower()
+    return out
+
+
+def render_assumptions(path=ASSUMPTIONS, only=None):
+    """"What we assumed for you": each limit with what it costs, why, where it is enforced
+    and how to lift it, the open ones first. `only` keeps one status. "" when there are none."""
+    rank = lambda e: ASSUMPTION_ORDER.index(e["Status"]) if e["Status"] in ASSUMPTION_ORDER else 0  # noqa: E731
+    entries = sorted((e for e in assumptions(path) if only is None or e["Status"] == only), key=rank)
+    cards = []
+    for e in entries:
+        rows = "".join(f"<dt>{k}</dt><dd>{inline(e[k])}</dd>" for k in ASSUMPTION_KEYS[1:] if e.get(k))
+        status = html.escape(e["Status"] or "no status")
+        cards.append(
+            f'<article class="assumption {status}"><h3><span class="aid">{e["id"]}</span>'
+            f'<span>{inline(e["limit"])}</span><span class="status">{status}</span></h3>'
+            f"<dl>{rows}</dl></article>"
+        )
+    return "".join(cards)
+
 
 def render_rules():
     """Each rules file: its rule headings visible, the full text on demand."""
@@ -366,6 +415,18 @@ CSS = """
   .rule-full h4{ font-size:var(--t-sm); font-weight:var(--w-semi); margin:var(--s-2) 0 0; }
   .rule-full p, .rule-full ul{ margin:0; }
 
+  .assumptions{ display:grid; gap:var(--s-4); }
+  .assumption{ border:var(--border); border-radius:var(--r-panel); padding:var(--s-4); background:var(--c-surface); }
+  .assumption.assumed{ border-color:var(--c-warn-edge); background:var(--c-warn-wash); }
+  .assumption h3{ display:flex; flex-wrap:wrap; gap:var(--s-2); align-items:baseline;
+    font-size:var(--t-base); font-weight:var(--w-semi); margin-block-end:var(--s-3); }
+  .assumption .aid{ font-family:var(--font-mono); font-size:var(--t-sm); color:var(--c-ink-soft); }
+  .assumption dl{ margin:0; display:grid; grid-template-columns:8.5rem 1fr; gap:var(--s-1) var(--s-4);
+    font-size:var(--t-sm); }
+  .assumption dt{ color:var(--c-ink-faint); }
+  .assumption dd{ margin:0; }
+  @media (max-width:40rem){ .assumption dl{ grid-template-columns:1fr; } .assumption dd{ margin-block-end:var(--s-2); } }
+
   .colophon{ border-block-start:var(--border); padding-block:var(--s-5) var(--s-8);
     font-size:var(--t-sm); color:var(--c-ink-faint); max-inline-size:var(--measure); }
 """
@@ -389,6 +450,12 @@ def main():
             '<p class="empty" style="padding-block:var(--s-4) var(--s-7)">No architecture '
             "decisions yet. The first will be the stack, from the Phase 0 planning pass.</p>"
         )
+    assumed = render_assumptions()
+    assumed_html = (
+        f'<div class="assumptions">{assumed}</div>' if assumed else
+        '<p class="empty">Nothing assumed yet. A limit the team sets without your word, rather '
+        "than one you stated, is listed here, with what it costs you and how to lift it.</p>"
+    )
     count = f"{len(adrs)} architecture decision{'s' if len(adrs) != 1 else ''}"
     name = html.escape(project_name())
     page = f"""<title>{name} Decisions</title>
@@ -417,6 +484,11 @@ def main():
     <p class="section-label">docs/research/</p>
     <h2 id="research-h">Choices agents made from research</h2>
     {research_decisions()}
+  </section>
+  <section class="research" aria-labelledby="assumed-h">
+    <p class="section-label">docs/assumptions.md</p>
+    <h2 id="assumed-h">What we assumed for you</h2>
+    {assumed_html}
   </section>
   <section class="research" aria-labelledby="rules-h">
     <p class="section-label">.claude/rules/</p>

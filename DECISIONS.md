@@ -258,3 +258,38 @@ each round shows its understanding before going on. Tests keep the rounds at fiv
 at most four questions, each of the 20 questions in exactly one round, and each
 placeholder the interview fills in exactly one round. `asking.md` is unchanged: its
 "at most two at a time" is for the team after setup, and setup's follow-ups keep it.
+
+## 15. Every assumed limit is registered, cited, surfaced and reversible
+
+Problem. Majles kept the developer's words and the decisions, but a limit an agent made
+up while working ("never", "must", "only", "at most") went straight into a rule, an ADR,
+a spec or a test, where it read as the developer's own. Nothing marked it, nobody asked
+about it, and lifting it meant finding every place that enforced it. The maintainer, on
+2026-11-11: such rules "slipped under the rag without any traceback"; make assumptions
+"clear, visible, vocal and reversible".
+
+Choice. Clear: `docs/assumptions.md`, a file the project owns, holds one entry per
+assumed limit, `## A-N. The limit`, with `Status:` (assumed, confirmed, lifted),
+`Assumed by:` with a date, `Why:`, `Costs the user:`, `Enforced in:`, `To lift:` and,
+once answered, `Decided: d-N`. Entries with headings, not one table row each: eight
+columns do not fit a phone, and the format matches `docs/direction.md`. Traceable: the
+shared rule `assumptions.md` has every limit cite `d-N` or `A-N`, every code marker read
+`ASSUMPTION(A-N: why)`, and every agent report end with `Assumptions I added:`.
+`majles lint` fails on an `A-N` missing from the register or lifted, and on a malformed
+entry; it warns on an uncited limit word in a project-written rule, ADR or spec, and on a
+marker with no id, and `--strict` fails on those. Warning by default was chosen over
+failing: four words are a blunt heuristic, every existing project would fail at once, and
+the lint line already shows in every session. Majles's shared rules are exempt, since the
+developer took them on with Majles and can detach one. Vocal: the session notice lists
+the open entries with their age, and `majles assumptions` lists all by status. Visible:
+both rendered pages gain "What we assumed for you" (the status page shows only the open
+ones). Reversible: lifting records the developer's words as `d-N` and removes every place
+in `Enforced in:` in one pull request; the entry stays.
+
+**Consequence:** existing projects see lint warnings for uncited limits in their ADRs and
+specs after sync, until each cites its source. The check is per paragraph, list item or
+table row, so one citation covers a paragraph with several limits. `CHANGELOG.md` says so.
+
+**Still open:** whether lint should fail by default once projects have cited their
+existing limits; and whether tests and gate configs, which the rule covers, should be
+traced by lint too.

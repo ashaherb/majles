@@ -20,6 +20,7 @@ shared .claude/agents/tester.md
 shared .claude/agents/100x-engineer.md
 shared .claude/rules/agents.md
 shared .claude/rules/asking.md
+shared .claude/rules/assumptions.md
 shared .claude/rules/majles.md
 shared .claude/rules/code-organization.md
 shared .claude/rules/decisions.md
@@ -52,6 +53,7 @@ once   .claude/rules/constraints.md
 once   .claude/rules/git-account.md
 once   docs/research/backlog.md
 once   docs/direction.md
+once   docs/assumptions.md
 
 [ui]
 shared .claude/agents/designer.md

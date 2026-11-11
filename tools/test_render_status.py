@@ -171,6 +171,19 @@ class Lists(Base):
         self.assertIn('Waiting on the developer<span class="count">2</span>', page)
         self.assertIn("<ol><li>Approve the plan</li><li>Try slice 2</li></ol>", page)
 
+    def test_only_the_open_assumptions_are_shown_with_a_count(self):
+        entry = "## A-{n}. Uploads are at most {n} MB\n\nStatus: {s}\nCosts the user: big photos.\n\n"
+        self.put("docs/assumptions.md", "# What we assumed\n\n```markdown\n## A-N. Example\n```\n\n"
+                 + entry.format(n=1, s="assumed") + entry.format(n=2, s="confirmed"))
+        page = self.page()
+        self.assertIn('What we assumed for you<span class="count">1</span>', page)
+        self.assertIn("Uploads are at most 1 MB", page)
+        self.assertNotIn("Uploads are at most 2 MB", page)
+        self.assertNotIn("Example", page)
+
+    def test_no_open_assumptions_no_section(self):
+        self.assertNotIn("What we assumed", self.page())
+
     def test_spend_takes_its_title_from_the_file(self):
         self.put("docs/status/spend.md", "# Spend, May\n\n| What | Spent |\n|---|---|\n| Evals | $12 |\n")
         page = self.page()

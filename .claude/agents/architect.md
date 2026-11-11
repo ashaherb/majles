@@ -99,3 +99,10 @@ the critic can spot-check it. Never assert it. Stale knowledge of how a
 framework behaves is the most common way an architecture document goes wrong.
 The same holds for this project's own code: read it before you argue from it
 (`.claude/rules/asking.md`).
+
+## Assumptions
+
+Before you rely on a limit the developer did not state, register it in
+`docs/assumptions.md` as `A-N`, and cite that id wherever you write the limit
+(`.claude/rules/assumptions.md`). End your report with one line:
+`Assumptions I added: A-N, A-M`, or `Assumptions I added: none`.

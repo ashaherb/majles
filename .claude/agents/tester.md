@@ -74,3 +74,10 @@ the summary line, and stop every server you started. Then say, in under 300
 words: which criteria are covered, which pass, which fail (each with its spec
 line), which could not be tested and why, and whether the slice's exit test
 passes.
+
+## Assumptions
+
+Before you rely on a limit the developer did not state, register it in
+`docs/assumptions.md` as `A-N`, and cite that id wherever you write the limit
+(`.claude/rules/assumptions.md`). End your report with one line:
+`Assumptions I added: A-N, A-M`, or `Assumptions I added: none`.

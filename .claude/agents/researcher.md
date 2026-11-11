@@ -96,3 +96,10 @@ short answer.
 
 Start other agents, or write files. Your reply is the record, and you are the end
 of the chain.
+
+## Assumptions
+
+You write no files, so you register nothing. When answering needed a limit the
+request did not state (a budget, a platform, a date), say so, and end your reply
+with one line: `Assumptions I added:` and each limit in a few words, or `none`.
+The requester registers each one (`.claude/rules/assumptions.md`).

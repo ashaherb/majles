@@ -15,6 +15,8 @@ input is missing:
 - CLAUDE.md, `## Phases`: one segment of the slice strip per `### Slice N` heading;
 - docs/status/now.md and next.md: a handful of one-line items each;
 - docs/status/waiting.md: what waits on the developer;
+- docs/assumptions.md: the limits the team assumed that the developer has not
+  confirmed or lifted yet, as "What we assumed for you";
 - docs/status/screens/: screenshots, as a contact sheet, with captions.md (optional);
 - docs/architecture.md: ```c4 blocks, drawn as C1 to C4 diagrams you zoom through;
 - docs/status/spend.md: spend against the budget.
@@ -703,6 +705,12 @@ def build(root, decisions_url=None, today=None):
     w, n_wait = waiting(root)
     if w:
         parts.append(block("Waiting on the developer", w, "waiting-h", "waiting", n_wait))
+
+    assumed = rd.render_assumptions(root / "docs" / "assumptions.md", only="assumed")
+    if assumed:
+        n_assumed = assumed.count('<article class="assumption')
+        parts.append(block("What we assumed for you", f'<div class="assumptions">{assumed}</div>',
+                           "assumed-h", count=n_assumed))
 
     shots, paths = screens(root)
     if shots:

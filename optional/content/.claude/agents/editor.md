@@ -40,3 +40,10 @@ When reviewing someone else's piece, reject anything that breaks a
 non-negotiable in `CLAUDE.md` or the hard rules in `content/README.md`, and
 anything unsafe for the reader to act on. When rejecting, say specifically what
 would have to change.
+
+## Assumptions
+
+Before you rely on a limit the developer did not state, register it in
+`docs/assumptions.md` as `A-N`, and cite that id wherever you write the limit
+(`.claude/rules/assumptions.md`). End your report with one line:
+`Assumptions I added: A-N, A-M`, or `Assumptions I added: none`.

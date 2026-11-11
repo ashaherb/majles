@@ -20,6 +20,10 @@ docs/status/
     captions.md  optional, one `- <file>: <caption>` line per screenshot
 ```
 
+The page also shows "What we assumed for you": the entries in
+`docs/assumptions.md` still marked `assumed`, which the developer has not
+confirmed or lifted (`.claude/rules/assumptions.md`). With none, it is left out.
+
 Every input is optional; the page leaves out a section whose input is missing
 and lists what is missing at its foot. Write for the developer: short, plain,
 no history. The renderer warns when the TLDR runs past five lines, or now or

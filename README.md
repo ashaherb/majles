@@ -144,6 +144,7 @@ always says what comes next.
 | What | Where |
 | --- | --- |
 | Your own words, quoted and dated | `docs/direction.md` |
+| Limits the team assumed, waiting for your yes or no | `docs/assumptions.md` |
 | Architecture: the choices that are hard to reverse | `docs/adr/` |
 | What a user gets, one spec per flow | `docs/specs/` |
 | Choices made from research, beside the request and findings | `docs/research/<task>/decision.md` |
@@ -152,6 +153,29 @@ always says what comes next.
 | The phase, the status and the next step | `CLAUDE.md` |
 
 `python3 tools/render_decisions.py <out.html>` renders them as one page.
+
+### What we assumed for you
+
+Agents set limits as they work: "never", "must", "only", "at most". A limit you
+did not state is an assumption, and it is never written down as if it were
+yours. The agent registers it first in `docs/assumptions.md`, as `A-1`, `A-2`
+and so on: the limit, why, who assumed it and when, what it costs you, every
+place it is enforced, and how to lift it. Every limit in a rule, ADR, spec, test
+or gate then cites either your words (`d-N`) or its `A-N`, and every agent's
+report ends with the assumptions it added.
+
+Each session opens with the ones you have not answered, with their age:
+
+```text
+1 assumption the developer has not confirmed or lifted (docs/assumptions.md):
+  A-1, 3 days: Uploads are at most 5 MB
+List them: majles assumptions
+```
+
+Claude brings them to you two at a time. Keep one, and it is marked
+`confirmed`. Lift one, and every place that enforced it goes in the same pull
+request. `majles lint` reports a limit that cites no source (`--strict` fails on
+it), and both rendered pages show the list.
 
 ### The board
 
@@ -226,7 +250,8 @@ so it stays silent.
 **The rules.** Short working rules in `.claude/rules/`, each with the reason it
 exists: research only what blocks the next step; record each decision in
 exactly one place; keep pull requests reviewable; never call work done until
-someone has used it as the user would.
+someone has used it as the user would; a limit you did not set is registered as
+an assumption, for you to keep or lift.
 
 You stay the decision-maker. An agent that hits a choice it cannot settle from
 the project's own documents asks you.
@@ -302,7 +327,9 @@ majles enable <module>        turn a module on
 majles disable <module>       turn a module off
 majles sync                   preview updates: --apply, --diff, --take <path>, --all
 majles detach <path>          the project takes over a shared file; sync skips it
-majles lint                   check the research, ADR, size and main-branch rules
+majles lint                   check the research, ADR, size and main-branch rules, and
+                              where each limit came from; --strict fails on one with no source
+majles assumptions            the limits the team assumed, by status, with their age
 majles placeholders           list the setup placeholders left in the project's files
 majles check                  what the session-start hook runs; quiet unless there is news
 majles board                  check what the board needs, and turn it on

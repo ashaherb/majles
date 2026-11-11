@@ -91,3 +91,10 @@ a prompt, a model or a guardrail still lands with its eval evidence
 
 Under 250 words: the specs you wrote, ranked, each with its payoff in one line
 and its evidence in one line, and what you could not measure.
+
+## Assumptions
+
+Before you rely on a limit the developer did not state, register it in
+`docs/assumptions.md` as `A-N`, and cite that id wherever you write the limit
+(`.claude/rules/assumptions.md`). End your report with one line:
+`Assumptions I added: A-N, A-M`, or `Assumptions I added: none`.

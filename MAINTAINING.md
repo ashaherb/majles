@@ -233,8 +233,8 @@ Build one locally to look with `python3 -m pip wheel . --no-deps -w dist`.
 
 `__version__` is the only place the version is written: `pyproject.toml` reads
 it, and so do `majles --version` and the lock of a project made from the
-package. A tag is `v` plus that string, so the tag `v0.1.0rc1` goes on the
-commit where `majles --version` prints `majles 0.1.0rc1`. Check that before
+package. A tag is `v` plus that string, so the tag `v0.1.0rc2` goes on the
+commit where `majles --version` prints `majles 0.1.0rc2`. Check that before
 tagging.
 
 ## Cutting a release
@@ -242,48 +242,73 @@ tagging.
 Publishing is a GitHub Release, never a local upload. `.github/workflows/release.yml`
 runs when a release is published and does three things in order:
 
-1. `build` checks that the tag is `v` plus `__version__` and that the release's
-   "pre-release" box matches the version (`rc`, `a`, `b` or `.dev` means pre-release),
-   runs the tests, builds the sdist and the wheel, and stores them as one artifact.
+1. `build` fails unless the tagged commit is on `main`, and the tag is `v` plus
+   `__version__`, and the release's "pre-release" box matches the version (any PEP 440
+   pre-release: `a`, `b`, `rc`, `dev` and the other spellings). It runs the tests,
+   builds the sdist and the wheel with pinned `build` and `setuptools`, installs the
+   wheel in a fresh venv, checks `majles --version` equals the tag's version, runs
+   `majles new demo`, and stores the files as one artifact. Nothing is uploaded before
+   all of that passes.
 2. A pre-release goes to TestPyPI (`publish-testpypi`, environment `testpypi`); a full
-   release goes to PyPI (`publish-pypi`, environment `pypi`).
-3. Each publish job waits for the environment's required reviewer, then uploads that
-   same artifact with Trusted Publishing: no PyPI token exists in the repo or on GitHub.
+   release goes to PyPI (`publish-pypi`, environment `pypi`). `publish-pypi` does not
+   run while the repo is private.
+3. Each job uploads that same artifact with Trusted Publishing: no PyPI token exists in
+   the repo or on GitHub.
 
-To cut one: merge the version bump, check that `majles --version` on `main` prints the
-version, create the release (`gh release create vX.Y.Z --target main`, adding
-`--prerelease` for a release candidate), and approve the run in the Actions tab.
-A tag that does not match fails `build` before anything is published. PyPI never accepts
-a filename twice, so a failed release is fixed with a new version, not a re-upload.
+PyPI never accepts a filename twice. If a publish job fails and nothing was uploaded,
+re-run the job. Only an upload that went through needs a new version.
 
-One-time setup, on the project page of each index and in the repo's Settings:
+### Dry run: `v0.1.0rc2`
 
-- pypi.org and test.pypi.org: add a Trusted Publisher for project `majles` (a pending
-  publisher before the first upload): the repository owner, the repository `majles`,
-  workflow `release.yml`, and environment `pypi` on pypi.org, `testpypi` on test.pypi.org.
-- GitHub, Settings, Environments: create `pypi` and `testpypi`, each with a required
-  reviewer, and deployment branches and tags limited to `v*`.
+`v0.1.0rc1` was tagged on a commit that has no `release.yml`, so a release on it runs
+nothing. The tag stays as it is. The version is `0.1.0rc2` and the dry run is `v0.1.0rc2`:
+merge the pull request that adds the workflow, check that `majles --version` on `main`
+prints `majles 0.1.0rc2`, then
+`gh release create v0.1.0rc2 --target main --prerelease`.
 
-Until `0.1.0` is on PyPI, `pipx install majles` gets the `0.0.1` placeholder:
-pipx and uv skip a release candidate unless asked for one, so uploading
-`0.1.0rc1` would not change that. The README's status banner and its
-"Installing before 0.1.0" section say so, and stay until the upload. The upload
-and the banner's removal are one step on launch day, in this order:
+While the repo is private, the TestPyPI dry run has no approval step: GitHub's required
+reviewers work only on public repos on the Free plan, so the `testpypi` environment cannot
+hold the job, and it uploads as soon as `build` passes. That is acceptable for TestPyPI.
+It is why `publish-pypi` refuses to run while the repo is private.
 
-1. One pull request: set `__version__ = "0.1.0"`, change the `CHANGELOG.md`
-   heading from "not out yet" to the date, and delete the README's status
-   banner and its "Installing before 0.1.0" section. `test_template.py` fails
-   if the banner and the version disagree, so neither can go in alone.
-2. Merge it. On `main`, check that `majles --version` prints `majles 0.1.0`,
-   then publish the release `v0.1.0` (not a pre-release) and approve the `pypi`
-   environment, at once, so `main` never says more than PyPI holds for longer than
-   the upload takes.
-3. On a clean machine, `pipx install majles` and `majles --version` print
-   `majles 0.1.0`. If the upload failed, revert the pull request before
-   anything else; the banner comes back with it.
+### One-time setup
 
-Once its `majles` is upgraded, a project made from `0.1.0rc1` sees the update
-notice at its next session, like any release.
+An environment must exist, with its rules, before the first release that uses it. A
+missing one is created by the first run with no protection at all.
+
+- test.pypi.org: `majles` is free there, so add a pending publisher (Your account,
+  Publishing): owner, repository `majles`, workflow `release.yml`, environment `testpypi`.
+- pypi.org: `majles` exists (0.0.1), so open the project's own Publishing settings and add
+  the trusted publisher: owner, repository `majles`, workflow `release.yml`, environment
+  `pypi`.
+- GitHub, Settings, Environments: create `testpypi` (no reviewer is possible while the
+  repo is private). Create `pypi` only after the repo is public, as in the launch order.
+- GitHub, Settings: turn on Immutable releases. Add a tag ruleset on `v*` that restricts
+  creating, updating and deleting tags.
+- After the first good run to PyPI, revoke every PyPI API token that can upload `majles`.
+
+### Launch day, in this order
+
+Until `0.1.0` is on PyPI, `pipx install majles` gets the `0.0.1` placeholder: pipx and uv
+skip a release candidate unless asked for one. The README's status banner and its
+"Installing before 0.1.0" section say so, and stay until the upload.
+
+1. Make the repo public.
+2. Create the environment `pypi` with a required reviewer (you) and a deployment tag rule
+   `v*`. Confirm the PyPI trusted publisher names environment `pypi`.
+3. Merge the launch pull request: `__version__ = "0.1.0"`, the CHANGELOG heading dated,
+   and the README banner and its "Installing before 0.1.0" section deleted.
+   `test_template.py` fails if the banner and the version disagree, so neither can go in
+   alone. On `main`, check that `majles --version` prints `majles 0.1.0`.
+4. Create the release `v0.1.0`, not a pre-release (`gh release create v0.1.0 --target main`),
+   and approve the `pypi` run in the Actions tab at once, so `main` never says more than
+   PyPI holds for longer than the upload takes.
+5. On a clean machine, `pipx install majles` and `majles --version` print `majles 0.1.0`.
+   If the upload failed before anything went up, re-run the job. If a version was
+   uploaded and is wrong, revert the pull request and cut `0.1.1`.
+
+Once its `majles` is upgraded, a project made from `0.1.0rc2` sees the update notice at
+its next session, like any release.
 
 Keep every shared file product-neutral and free of placeholders. A fact about a
 specific product belongs in a file the project owns. A behaviour only some

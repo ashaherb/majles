@@ -293,3 +293,21 @@ table row, so one citation covers a paragraph with several limits. `CHANGELOG.md
 **Still open:** whether lint should fail by default once projects have cited their
 existing limits; and whether tests and gate configs, which the rule covers, should be
 traced by lint too.
+
+## 16. A published GitHub Release uploads to PyPI, through Trusted Publishing
+
+Problem. A local upload needs a long-lived PyPI token on one machine, and nothing
+checks that the tag, the version and what was tested are the same thing.
+
+Choice. `.github/workflows/release.yml` runs on `release: published` only. One `build` job
+checks the tag against `__version__`, runs the tests and builds the sdist and wheel once;
+two publish jobs upload that same artifact. A pre-release goes to TestPyPI (environment
+`testpypi`), a full release to PyPI (environment `pypi`), split by the release's own
+pre-release flag, which `build` also checks against the version. Each environment needs a
+reviewer's approval. Trusted Publishing (OIDC) means no token is stored; `id-token: write`
+is on the publish jobs only. Actions are pinned to commit SHAs.
+
+**Consequence:** nothing is uploaded from a laptop; a mismatched tag fails before any
+upload; the pinned SHAs are bumped by hand.
+
+**Still open:** the first real run is the rc1 dry run to TestPyPI.

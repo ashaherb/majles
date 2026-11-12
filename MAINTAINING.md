@@ -227,15 +227,42 @@ checkout `majles` runs from, so keep that checkout on `main` and pull it after
 each merge. Projects on the installed package receive it at the next release.
 
 To release, bump `__version__` in `majles/__init__.py`, add a `CHANGELOG.md`
-entry that says what changes in a project, and build with
-`python3 -m pip wheel . --no-deps -w dist`. The wheel holds only the files
-the manifest lists, so a file missing from the manifest never ships.
+entry that says what changes in a project, and merge. The wheel holds only the
+files the manifest lists, so a file missing from the manifest never ships.
+Build one locally to look with `python3 -m pip wheel . --no-deps -w dist`.
 
 `__version__` is the only place the version is written: `pyproject.toml` reads
 it, and so do `majles --version` and the lock of a project made from the
 package. A tag is `v` plus that string, so the tag `v0.1.0rc1` goes on the
 commit where `majles --version` prints `majles 0.1.0rc1`. Check that before
 tagging.
+
+## Cutting a release
+
+Publishing is a GitHub Release, never a local upload. `.github/workflows/release.yml`
+runs when a release is published and does three things in order:
+
+1. `build` checks that the tag is `v` plus `__version__` and that the release's
+   "pre-release" box matches the version (`rc`, `a`, `b` or `.dev` means pre-release),
+   runs the tests, builds the sdist and the wheel, and stores them as one artifact.
+2. A pre-release goes to TestPyPI (`publish-testpypi`, environment `testpypi`); a full
+   release goes to PyPI (`publish-pypi`, environment `pypi`).
+3. Each publish job waits for the environment's required reviewer, then uploads that
+   same artifact with Trusted Publishing: no PyPI token exists in the repo or on GitHub.
+
+To cut one: merge the version bump, check that `majles --version` on `main` prints the
+version, create the release (`gh release create vX.Y.Z --target main`, adding
+`--prerelease` for a release candidate), and approve the run in the Actions tab.
+A tag that does not match fails `build` before anything is published. PyPI never accepts
+a filename twice, so a failed release is fixed with a new version, not a re-upload.
+
+One-time setup, on the project page of each index and in the repo's Settings:
+
+- pypi.org and test.pypi.org: add a Trusted Publisher for project `majles` (a pending
+  publisher before the first upload): the repository owner, the repository `majles`,
+  workflow `release.yml`, and environment `pypi` on pypi.org, `testpypi` on test.pypi.org.
+- GitHub, Settings, Environments: create `pypi` and `testpypi`, each with a required
+  reviewer, and deployment branches and tags limited to `v*`.
 
 Until `0.1.0` is on PyPI, `pipx install majles` gets the `0.0.1` placeholder:
 pipx and uv skip a release candidate unless asked for one, so uploading
@@ -248,8 +275,9 @@ and the banner's removal are one step on launch day, in this order:
    banner and its "Installing before 0.1.0" section. `test_template.py` fails
    if the banner and the version disagree, so neither can go in alone.
 2. Merge it. On `main`, check that `majles --version` prints `majles 0.1.0`,
-   tag that commit `v0.1.0`, build the wheel, and upload it to PyPI, at once,
-   so `main` never says more than PyPI holds for longer than the upload takes.
+   then publish the release `v0.1.0` (not a pre-release) and approve the `pypi`
+   environment, at once, so `main` never says more than PyPI holds for longer than
+   the upload takes.
 3. On a clean machine, `pipx install majles` and `majles --version` print
    `majles 0.1.0`. If the upload failed, revert the pull request before
    anything else; the banner comes back with it.

@@ -1,0 +1,91 @@
+name: release
+
+# Publishes to PyPI when a GitHub Release is published, and only then
+# (DECISIONS.md, entry 16). A release marked "pre-release" goes to TestPyPI, a full
+# release to PyPI. No token is stored anywhere: PyPI trusts this workflow by its
+# identity (Trusted Publishing, OIDC). Each publish job waits for a person to
+# approve its GitHub environment.
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: The tag and the pre-release flag match the package version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          version=$(python -c "import re, pathlib; print(re.search(r'__version__ = \"([^\"]+)\"', pathlib.Path('majles/__init__.py').read_text()).group(1))")
+          echo "tag $TAG, package version $version, pre-release flag $PRERELEASE"
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::tag $TAG is not v$version"; exit 1
+          fi
+          if echo "$version" | grep -Eq '(a|b|rc|\.dev)[0-9]+'; then pre=true; else pre=false; fi
+          if [ "$pre" != "$PRERELEASE" ]; then
+            echo "::error::version $version needs the release's pre-release flag to be $pre"; exit 1
+          fi
+      - name: Tests
+        run: |
+          python -m unittest discover -s majles -p 'test_*.py'
+          python -m unittest tools/test_render_decisions.py tools/test_render_status.py
+      - name: Build the sdist and the wheel
+        run: |
+          python -m pip install -q build
+          python -m build --outdir dist .
+          ls dist
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish-testpypi:
+    needs: build
+    if: ${{ github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/majles
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    needs: build
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: pypi
+      url: https://pypi.org/p/majles
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1

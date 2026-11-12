@@ -13,10 +13,6 @@ a narrow job, a set of rules with the reason behind each one, and a decision
 log you can publish as a page. It ships no stack and no product code. Those are
 the first decisions your project makes, with the team.
 
-> **Status: pre-release.** Version 0.1.0 is not on PyPI yet, and the `majles`
-> name there holds a placeholder. Until it is published, install from a clone:
-> see [Installing before 0.1.0](#installing-before-010).
-
 ## Quick start
 
 You need Python 3.10 or later, Git, [Claude Code](https://docs.claude.com/en/docs/claude-code),
@@ -216,19 +212,6 @@ If you go without the board on purpose, saying no in setup or running
 `majles board --off` records that choice, with the date, in `.majles.json`. The
 line then shows once a week instead of every session, and `majles board` still
 turns the board on any time.
-
-### Installing before 0.1.0
-
-Pre-release only. Clone this repo, then install from the clone:
-
-```bash
-pipx install ./majles        # or: uv tool install ./majles
-```
-
-Or run it without installing: `PYTHONPATH=<clone> python3 -m majles new my-idea`.
-Run that way, Majles reads the template from the clone's last commit, and
-`majles sync` follows it. The session-start notice needs `majles` on your path,
-so it stays silent.
 
 ## What you get
 

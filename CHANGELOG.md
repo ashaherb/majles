@@ -3,7 +3,7 @@
 Each entry says what changes in your project when you sync to that version.
 Run `majles sync` to preview it, and `majles sync --apply` to write it.
 
-## 0.1.0: the launch release, not out yet
+## 0.1.0: the launch release, DATE (set to the merge day)
 
 The first public release. (On PyPI, 0.0.1 is only a placeholder that reserves the name.)
 

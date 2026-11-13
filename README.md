@@ -222,8 +222,15 @@ turns the board on any time.
 Pre-release only. Clone this repo, then install from the clone:
 
 ```bash
-pipx install ./majles        # or: uv tool install ./majles
+pipx install --force ./majles        # or: uv tool install --force ./majles
 ```
+
+Run the same command again after you pull: `--force` replaces the installed copy,
+and the build is fresh. `pyproject.toml` tells uv to rebuild when a Python file,
+the template or the git commit changes, so a plain `--force` is enough. If a
+checkout still reports old behaviour (an older clone, say, without that setting),
+run `uv tool install --force --reinstall --no-cache ./majles`. pipx builds from
+the folder each time and does not have the trap.
 
 Or run it without installing: `PYTHONPATH=<clone> python3 -m majles new my-idea`.
 Run that way, Majles reads the template from the clone's last commit, and

@@ -37,3 +37,19 @@ include-package-data = false
 
 [tool.setuptools.dynamic]
 version = { attr = "majles.__version__" }
+
+# A local-path install (`uv tool install <checkout>`) is rebuilt only when a cache
+# key changes. uv's default keys are pyproject.toml, setup.py and setup.cfg, so an
+# edited .py file with the same version was served from a stale cached build.
+# Setting the keys replaces the defaults, so those stay listed first.
+[tool.uv]
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "setup.py" },
+    { file = "setup.cfg" },
+    { file = "majles/**/*.py" },
+    { file = "majles/manifest.txt" },
+    { file = "template/**/*" },
+    { file = ".claude/**/*" },
+    { git = { commit = true } },
+]

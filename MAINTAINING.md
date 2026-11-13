@@ -283,8 +283,8 @@ missing one is created by the first run with no protection at all.
   `pypi`.
 - GitHub, Settings, Environments: create `testpypi` (no reviewer is possible while the
   repo is private). Create `pypi` only after the repo is public, as in the launch order.
-- GitHub, Settings: turn on Immutable releases. Add a tag ruleset on `v*` that restricts
-  creating, updating and deleting tags.
+- GitHub, Settings: turn on Immutable releases. With it on, a release whose build fails
+  still locks its tag, so a failed `v0.1.0` build means `0.1.1`, even with nothing uploaded.
 - After the first good run to PyPI, revoke every PyPI API token that can upload `majles`.
 
 ### Launch day, in this order
@@ -295,7 +295,9 @@ skip a release candidate unless asked for one. The README's status banner and it
 
 1. Make the repo public.
 2. Create the environment `pypi` with a required reviewer (you) and a deployment tag rule
-   `v*`. Confirm the PyPI trusted publisher names environment `pypi`.
+   `v*`. Confirm the PyPI trusted publisher names environment `pypi`. Add a tag ruleset on
+   `v*` that restricts creating, updating and deleting tags, with Repository admin on its
+   bypass list, or step 4 cannot create its tag. Rulesets need a public repo on GitHub Free.
 3. Merge the launch pull request: `__version__ = "0.1.0"`, the CHANGELOG heading dated,
    and the README banner and its "Installing before 0.1.0" section deleted.
    `test_template.py` fails if the banner and the version disagree, so neither can go in

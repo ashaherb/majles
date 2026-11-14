@@ -35,7 +35,15 @@ and `optional/` stay here. It also writes `.majles.json`, which records what
 the project received, and is how it stays in step with the template later.
 
 Install `majles` with `pipx install majles` or `uv tool install majles` (or
-`pip install .` from a checkout). Installed, it carries the template for its own version and records
+`pip install .` from a checkout). From a checkout, reinstall after every pull with
+`uv tool install --force <checkout>` (or `pipx install --force <checkout>`). uv keys
+its build cache for a local path on files it is told to watch, and by default that is
+only `pyproject.toml`, `setup.py` and `setup.cfg`, so an edited `.py` file with the same
+version was once installed stale (`majles board` missing from a `0.1.0rc1`).
+`[tool.uv] cache-keys` in `pyproject.toml` adds `majles/**/*.py`, the manifest, the
+template, `.claude/` and the git commit; keep the defaults in it, and add a key when a
+new folder is shipped. If an install still looks stale, add `--reinstall --no-cache`.
+pipx builds fresh with `--force` and has no such cache. Installed, it carries the template for its own version and records
 that version in `.majles.json`. To track `main` instead, run it from a checkout
 of this repository: put a `majles` on your PATH that runs `python3 -m majles`
 from it (for example a one-line shell script), or run `python3 -m majles` from

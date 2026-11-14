@@ -66,6 +66,13 @@ template, under this name or an earlier one. A new project needs none of it.
   `.claude/settings.json` is yours, so sync does not change it: copy the `deny` list
   from a new project if you want it. A deny rule cannot stop a shell command from
   reading a file; `.claude/rules/agents.md` says so.
+- **Setup never writes or creates without your yes, even when you skip the questions.**
+  "Skip the questions" now skips the rounds only: setup fills what it can, labels every
+  other answer as a default, shows the one summary ending with the account setup (owner,
+  remote, email, visibility), and asks for one yes before any file or repo. Setup also
+  says which placeholder values go in raw, so `git-account.md` no longer gets doubled
+  backticks, and tells you what opening Phase 0 costs. This changes only `SETUP.md` and
+  the setup block of `CLAUDE.md`, which new projects get.
 - **Setup pins Beads to 1.3.4**, and installs the release binary only after its
   checksum passes. This changes only `SETUP.md`, which new projects get.
 - **The tool is called Majles.** The CLI is `majles`. Install it with

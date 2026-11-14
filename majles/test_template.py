@@ -41,12 +41,51 @@ ALLOWED_WORDS = {"optional/i18n/.claude/rules/i18n.md",
 ENTRIES = bp.parse_manifest((ROOT / bp.MANIFEST).read_text(encoding="utf-8"))
 
 
+def git_listed(root):
+    """The files git would commit at root: tracked, plus untracked ones not ignored.
+
+    None when root is not the top of a git checkout (an sdist, or git missing), so the
+    caller walks the tree instead. A file a contributor forgot to add is still listed;
+    ignored build output (build/, *.egg-info/) is not.
+    """
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}  # a hook sets GIT_DIR
+
+    def git(*args):
+        return subprocess.run(["git", "-C", str(root), *args], capture_output=True, env=env)
+
+    try:
+        top = git("rev-parse", "--show-toplevel")
+        if top.returncode or pathlib.Path(top.stdout.decode().strip()).resolve() != root.resolve():
+            return None
+        out = git("ls-files", "-z", "--cached", "--others", "--exclude-standard")
+    except OSError:
+        return None
+    if out.returncode:
+        return None
+    return [name for name in out.stdout.decode("utf-8", "surrogateescape").split("\0") if name]
+
+
+def scannable(names, skip_top=()):
+    """The relative paths worth scanning: no .git, __pycache__ or .DS_Store, and no
+    path under a top-level folder in skip_top."""
+    for name in names:
+        parts = pathlib.PurePosixPath(name).parts
+        if parts and parts[0] not in (".git", *skip_top) and "__pycache__" not in parts \
+                and parts[-1] != ".DS_Store":
+            yield name
+
+
+def files_under(root, skip_top=()):
+    """The files a scan reads at root: what git would commit, or every file outside git."""
+    names = git_listed(root)
+    if names is None:
+        names = [p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()]
+    # ls-files --cached still names a tracked file deleted from the working tree.
+    return {n for n in scannable(names, skip_top) if (root / n).is_file()}
+
+
 def repo_files():
-    for p in ROOT.rglob("*"):
-        rel = p.relative_to(ROOT)
-        if p.is_file() and rel.parts[0] not in (".git", "majles") and "__pycache__" not in rel.parts \
-                and p.name != ".DS_Store":
-            yield rel.as_posix()
+    return files_under(ROOT, skip_top=("majles",))
 
 
 def text(rel):
@@ -197,6 +236,35 @@ class SetupGuide(unittest.TestCase):
         self.assertIn('marked "drafted"', " ".join(summary.split()))
         board = next(fills for rows in self.rounds().values() for nums, fills in rows if 20 in nums)
         self.assertIn("step 4b", board)
+
+    def test_every_path_shows_the_summary_and_asks_one_yes(self):
+        # A developer said "skip the questions", and setup wrote every file, then created
+        # and pushed the GitHub repo, with no summary and no yes.
+        interview = self.section("1. Interview")
+        self.assertLess(interview.index("### When the developer skips the questions"),
+                        interview.index("### The summary"))
+        skip = " ".join(interview.split("### When the developer skips the questions", 1)[1]
+                        .split("\n### ", 1)[0].split())
+        for step in ("Fill what can be derived", "Make every other answer a default",
+                     "working assumption", "docs/assumptions.md", "Show the one summary below",
+                     "account setup", "Ask for one yes", "answers part of the interview"):
+            self.assertIn(step, skip)
+        summary = " ".join(interview.split("### The summary", 1)[1].split("\n### ", 1)[0].split())
+        for line in ("after a skip", "**Owner:**", "**Remote:**", "**Email:**", "**Visibility:**",
+                     "ask for one yes", "gh repo create", "No path reaches step 2 or step 4"):
+            self.assertIn(line, summary)
+        self.assertLess(summary.index("ask for one yes"), summary.index("gh repo create"))
+        self.assertIn("summary's yes", self.section("4. Repo").split("1. `git init", 1)[0])
+
+    def test_a_placeholder_inside_backticks_takes_a_raw_value(self):
+        # A value given with its own backticks came out doubled in git-account.md.
+        fill = self.section("2. Fill the placeholders")
+        raw = " ".join(fill.split("Every value goes in raw", 1)[1].split("\n\n", 1)[0].split())
+        wrapped = {name for _, _, src, _ in ENTRIES
+                   for name in re.findall(r"`\{\{([A-Z_]+)\}\}`", text(src))} - EXAMPLES
+        self.assertTrue(wrapped)
+        missing = sorted(name for name in wrapped if f"`{name}`" not in raw)
+        self.assertFalse(missing, f"wrapped in backticks but not listed as raw: {missing}")
 
     def test_it_names_the_file_adopt_writes_beside_claude_md(self):
         # Issue #4: setup merges the template adopt wrote beside the project's CLAUDE.md.
@@ -350,11 +418,7 @@ SAYS_THE_OLD_NAME = {"LICENSE", "CHANGELOG.md", "DECISIONS.md"}
 
 
 def all_repo_files():
-    for p in ROOT.rglob("*"):
-        rel = p.relative_to(ROOT)
-        if p.is_file() and rel.parts[0] != ".git" and "__pycache__" not in rel.parts \
-                and p.name != ".DS_Store":
-            yield rel.as_posix()
+    return files_under(ROOT)
 
 
 class Portability(unittest.TestCase):
@@ -402,6 +466,52 @@ class Portability(unittest.TestCase):
     def test_the_old_name_is_only_in_the_compatibility_code(self):
         hits = self.hits(OLD_NAME, set(all_repo_files()) - COMPATIBILITY - SAYS_THE_OLD_NAME)
         self.assertFalse(hits, "the old name outside the compatibility code:\n" + "\n".join(hits))
+
+
+class ScannedFiles(unittest.TestCase):
+    """The scans read what the repo would ship, not build output left by an install."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = pathlib.Path(self.tmp.name).resolve()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def write(self, *names):
+        for name in names:
+            (self.root / name).parent.mkdir(parents=True, exist_ok=True)
+            (self.root / name).write_text("x")
+
+    def git(self, *args):
+        env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
+                       cwd=self.root, check=True, capture_output=True, env=env)
+
+    def test_a_checkout_skips_ignored_files_and_keeps_untracked_ones(self):
+        self.git("init", "-q")
+        (self.root / ".gitignore").write_text("build/\n*.egg-info/\n")
+        self.write("tracked.md", "gone.md", "tools/x.py")
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", "c")
+        (self.root / "gone.md").unlink()  # tracked, deleted from the working tree
+        self.write("forgot-to-add.md", "build/lib/copy.md", "pkg.egg-info/PKG-INFO",
+                   "tools/__pycache__/x.pyc", "tools/.DS_Store")
+        self.assertEqual(files_under(self.root),
+                         {".gitignore", "tracked.md", "tools/x.py", "forgot-to-add.md"})
+        self.assertEqual(files_under(self.root, skip_top=("tools",)),
+                         {".gitignore", "tracked.md", "forgot-to-add.md"})
+
+    def test_outside_git_every_file_is_walked(self):
+        # An sdist has no .git: nothing says what is ignored, so everything is scanned.
+        self.write("a.md", "build/lib/copy.md", "__pycache__/x.pyc", ".DS_Store")
+        self.assertIsNone(git_listed(self.root))
+        self.assertEqual(files_under(self.root), {"a.md", "build/lib/copy.md"})
+
+    def test_the_filter_drops_git_caches_and_skipped_folders(self):
+        names = [".git/config", "a/__pycache__/b.pyc", "a/.DS_Store", "majles/cli.py", "a/b.md"]
+        self.assertEqual(list(scannable(names)), ["majles/cli.py", "a/b.md"])
+        self.assertEqual(list(scannable(names, skip_top=("majles",))), ["a/b.md"])
 
 
 class MainGuard(unittest.TestCase):

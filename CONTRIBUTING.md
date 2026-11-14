@@ -47,6 +47,11 @@ python3 -m unittest discover -s majles -p 'test_*.py'
 python3 -m unittest tools/test_render_decisions.py tools/test_render_status.py
 ```
 
+To try your change as the installed command, run `uv tool install --force .` (or
+`pipx install --force .`) from the clone. `pyproject.toml` makes uv rebuild when the
+code, the template or the git commit changes; without that, uv reuses a cached build
+for a local folder. If it still looks stale, add `--reinstall --no-cache`.
+
 - One change per pull request, under about 1,000 added lines.
 - Add a test for anything the CLI does differently.
 - Majles uses only the Python standard library. Please keep it that way.

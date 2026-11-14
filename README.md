@@ -13,10 +13,6 @@ a narrow job, a set of rules with the reason behind each one, and a decision
 log you can publish as a page. It ships no stack and no product code. Those are
 the first decisions your project makes, with the team.
 
-> **Status: pre-release.** Version 0.1.0 is not on PyPI yet, and the `majles`
-> name there holds a placeholder. Until it is published, install from a clone:
-> see [Installing before 0.1.0](#installing-before-010).
-
 ## Quick start
 
 You need Python 3.10 or later, Git, [Claude Code](https://docs.claude.com/en/docs/claude-code),
@@ -93,11 +89,7 @@ Claude follows `SETUP.md`, in order:
    choices where the answers are obvious. It does not ask what you already
    said. It asks a follow-up only when an answer is too vague to check, when
    two answers contradict, or when a wrong guess would be costly, and it says
-   which. Then it shows one summary, ending with the account setup (the
-   owner, the remote, the commit email and the visibility), and writes nothing
-   and creates nothing until you confirm it. If you say "skip the questions",
-   it skips the rounds, not the summary: it fills in what it can, labels every
-   other answer as a default, and still asks for that one yes.
+   which. Then it shows one summary, and writes nothing until you confirm it.
 2. It writes your own words, quoted and dated, in `docs/direction.md`. A rule
    Claude drafted for you is marked "drafted", and never becomes a gate without
    your yes.
@@ -221,26 +213,6 @@ If you go without the board on purpose, saying no in setup or running
 line then shows once a week instead of every session, and `majles board` still
 turns the board on any time.
 
-### Installing before 0.1.0
-
-Pre-release only. Clone this repo, then install from the clone:
-
-```bash
-pipx install --force ./majles        # or: uv tool install --force ./majles
-```
-
-Run the same command again after you pull: `--force` replaces the installed copy,
-and the build is fresh. `pyproject.toml` tells uv to rebuild when a Python file,
-the template or the git commit changes, so a plain `--force` is enough. If a
-checkout still reports old behaviour (an older clone, say, without that setting),
-run `uv tool install --force --reinstall --no-cache ./majles`. pipx builds from
-the folder each time and does not have the trap.
-
-Or run it without installing: `PYTHONPATH=<clone> python3 -m majles new my-idea`.
-Run that way, Majles reads the template from the clone's last commit, and
-`majles sync` follows it. The session-start notice needs `majles` on your path,
-so it stays silent.
-
 ## What you get
 
 **The team.** Ten agents in `.claude/agents/`, each with one job:
@@ -358,12 +330,11 @@ directory. `majles --version` prints the version.
 ## What it costs
 
 Majles is free. The agents run in your Claude Code session, so they use your
-Claude plan. Opening Phase 0 is the costly step at the start; see
-[Start Phase 0](#5-start-phase-0) for what one run cost. The `majles` command
-makes no network calls of its own and sends nothing anywhere: there is no
-telemetry. The heavy agents are the Opus ones and the 100x-engineer, which runs
-rarely, before a release. On a smaller plan, move those to Sonnet: change the
-agent's `model:` line, which makes that file yours (`majles detach`).
+Claude plan. The `majles` command makes no network calls of its own and sends
+nothing anywhere: there is no telemetry. The heavy agents are the Opus ones and
+the 100x-engineer, which runs rarely, before a release. On a smaller plan, move
+those to Sonnet: change the agent's `model:` line, which makes that file yours
+(`majles detach`).
 
 ## Secrets
 

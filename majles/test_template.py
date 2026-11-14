@@ -237,6 +237,35 @@ class SetupGuide(unittest.TestCase):
         board = next(fills for rows in self.rounds().values() for nums, fills in rows if 20 in nums)
         self.assertIn("step 4b", board)
 
+    def test_every_path_shows_the_summary_and_asks_one_yes(self):
+        # A developer said "skip the questions", and setup wrote every file, then created
+        # and pushed the GitHub repo, with no summary and no yes.
+        interview = self.section("1. Interview")
+        self.assertLess(interview.index("### When the developer skips the questions"),
+                        interview.index("### The summary"))
+        skip = " ".join(interview.split("### When the developer skips the questions", 1)[1]
+                        .split("\n### ", 1)[0].split())
+        for step in ("Fill what can be derived", "Make every other answer a default",
+                     "working assumption", "docs/assumptions.md", "Show the one summary below",
+                     "account setup", "Ask for one yes", "answers part of the interview"):
+            self.assertIn(step, skip)
+        summary = " ".join(interview.split("### The summary", 1)[1].split("\n### ", 1)[0].split())
+        for line in ("after a skip", "**Owner:**", "**Remote:**", "**Email:**", "**Visibility:**",
+                     "ask for one yes", "gh repo create", "No path reaches step 2 or step 4"):
+            self.assertIn(line, summary)
+        self.assertLess(summary.index("ask for one yes"), summary.index("gh repo create"))
+        self.assertIn("summary's yes", self.section("4. Repo").split("1. `git init", 1)[0])
+
+    def test_a_placeholder_inside_backticks_takes_a_raw_value(self):
+        # A value given with its own backticks came out doubled in git-account.md.
+        fill = self.section("2. Fill the placeholders")
+        raw = " ".join(fill.split("Every value goes in raw", 1)[1].split("\n\n", 1)[0].split())
+        wrapped = {name for _, _, src, _ in ENTRIES
+                   for name in re.findall(r"`\{\{([A-Z_]+)\}\}`", text(src))} - EXAMPLES
+        self.assertTrue(wrapped)
+        missing = sorted(name for name in wrapped if f"`{name}`" not in raw)
+        self.assertFalse(missing, f"wrapped in backticks but not listed as raw: {missing}")
+
     def test_it_names_the_file_adopt_writes_beside_claude_md(self):
         # Issue #4: setup merges the template adopt wrote beside the project's CLAUDE.md.
         self.assertIn(f"`{bp.CLAUDE_BESIDE}`", text("template/SETUP.md"))

@@ -19,7 +19,9 @@ Follow it in order. The last step deletes this file.
 ## 1. Interview
 
 The interview is five short rounds, in this order, then one summary. Nothing is
-written to a file until the developer has confirmed the summary.
+written to a file, and nothing is created outside this folder, until the
+developer has confirmed the summary. A developer who skips the rounds still
+gets the summary ("When the developer skips the questions", below).
 
 **Every round goes the same way.** Open it with its heading, as below, and say
 which round it is ("Round 2 of 5: the product"). Then:
@@ -112,15 +114,47 @@ question:
 Ask at most two follow-ups at a time. If an answer is still unsure after one
 follow-up, write the working assumption and label it as one; do not ask again.
 
+### When the developer skips the questions
+
+A developer may say "skip the questions", "pick sensible defaults", or answer
+some rounds and not others. That waives the rounds, never the summary and its
+yes. Then:
+
+1. **Fill what can be derived:** from the description, the old `CLAUDE.md` in
+   an adopted project, and what this machine says for round 5 (the slug,
+   `gh auth status`, `git config user.email`).
+2. **Make every other answer a default,** labelled as a working assumption in
+   the summary. One that limits anything (never, must, only, at most) is listed
+   with the `A-N` it will get, and registered in `docs/assumptions.md` after
+   the yes ("Then record it").
+3. **Show the one summary below,** in full, with the account setup shown
+   plainly.
+4. **Ask for one yes,** in one question, before writing a file or creating
+   anything outside this folder. "Skip the questions" is not that yes.
+
+A developer who answers part of the interview gets the same: their answers as
+theirs, the rest as labelled defaults, the same summary, the same one yes.
+
 ### The summary
 
-After round 5, show one summary and ask the developer to confirm or correct it.
+Every path reaches this summary: after round 5, after a skip, or after a
+partial answer. Show it, and ask the developer to confirm or correct it.
 It lists every answer, grouped by round, each marked as the developer's words,
 taken from the description, or a working assumption; the non-negotiables, each
-marked as theirs or drafted; the modules that will be turned on and off; and the
-repo that will be created, with its owner and visibility. Apply any correction
-and show the changed lines again. Write nothing, not even `docs/direction.md`,
-until they confirm.
+marked as theirs or drafted; and the modules that will be turned on and off.
+
+It ends with the account setup, one line each, so a wrong account is caught
+before anything exists:
+
+- **Owner:** the GitHub account the repo is created under, and the repo name;
+- **Remote:** the `origin` URL that will be written;
+- **Email:** the address every commit is made with;
+- **Visibility:** private, unless the developer said otherwise.
+
+Apply any correction and show the changed lines again. Then ask for one yes.
+Write nothing, not even `docs/direction.md`, and create nothing (no `git init`,
+no `gh repo create`, no push), until they confirm. No path reaches step 2 or
+step 4 without this yes.
 
 ### Then record it
 
@@ -150,6 +184,11 @@ They appear only in files the project owns: `CLAUDE.md`, `README.md`,
 `.claude/rules/constraints.md`, `.claude/rules/git-account.md` (filled in step
 4), and `content/README.md` if the content module
 is on. Never put project facts in a shared file. Sync would overwrite them.
+
+Every value goes in raw: no backticks, quotes or bold of its own. Where a
+placeholder sits inside backticks in the file (`GIT_REMOTE`, `GIT_EMAIL`,
+`GH_ACCOUNT`, `REPO_SLUG`, `EXISTING_MATERIAL_PATH`), the file already supplies
+them, and a value with its own would come out doubled.
 
 - `DECISION_LOG_URL` and `STATUS_PAGE_URL` are filled in step 5.
 - `CORE_FLOWS` names the flows the phase plan's slices are cut from. Phase 0
@@ -186,6 +225,10 @@ might call it "curator"), leave `editor.md` alone. Instead, `majles detach
 
 ## 4. Repo
 
+Only after the summary's yes (step 1). The repo is created with the owner,
+remote, email and visibility the summary showed; if any of them has to change,
+show the changed line and ask again before creating anything.
+
 **An existing repo** (an adopted project, where `git remote get-url origin`
 prints a URL): skip 1 to 3. Check that `git config user.email` is the address
 the developer commits with, then do 4 and 5, with `GIT_REMOTE` taken from the
@@ -197,12 +240,14 @@ existing `origin`.
    named as the owner.
 3. `gh repo create <owner>/<slug> --private`, then add the remote it prints
    as `origin`.
-4. Fill `.claude/rules/git-account.md` from round 5's answers: `GIT_REMOTE`
+4. Fill `.claude/rules/git-account.md` from round 5's answers, each value raw
+   (the file already wraps the first three in backticks): `GIT_REMOTE`
    (the `origin` URL), `GIT_EMAIL` (the commit address), `GH_ACCOUNT` (how a
    writing `gh` command runs, for example plain `gh` or
    `GH_TOKEN=$(gh auth token --user <owner>) gh` when the machine has several
    accounts), and `REPO_VISIBILITY` (`private` unless the developer said
-   otherwise).
+   otherwise). Then read the four lines back: a value with two backticks on
+   each side carried its own; take them out.
 5. Turn on the guard that keeps `main` for merged pull requests:
    `git config core.hooksPath .githooks`. Every later clone needs it too;
    `majles lint` reports one that does not.
@@ -387,5 +432,9 @@ python3 -m unittest tools/test_render_decisions.py tools/test_render_status.py
    and reaches `main` through a pull request like any other change.
 4. Tell the developer to start a new session so the agents, rules and hook
    load, and that Phase 0 starts with "run the architect on the Phase 0 brief
-   in CLAUDE.md". If the board is off, say so again: what is missing, and that
+   in CLAUDE.md". Tell them plainly what that turn costs: it is the most
+   expensive one at the start, about $7 at API prices in one measured run on a
+   small app (or that much of a subscription plan's usage), and its research
+   requests are what drive it (Majles's `README.md`, "Start Phase 0"). If the
+   board is off, say so again: what is missing, and that
    `majles board` turns it on.

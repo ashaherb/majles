@@ -311,3 +311,27 @@ is on the publish jobs only. Actions are pinned to commit SHAs.
 upload; the pinned SHAs are bumped by hand.
 
 **Still open:** the first real run is the rc1 dry run to TestPyPI.
+
+## 17. Skipping the setup questions skips the rounds, never the summary and its yes
+
+Problem. In a trial run, a developer said "skip the questions, pick sensible defaults",
+and the setup session took that as consent to everything: it wrote every file, then
+created and pushed a GitHub repo, with no summary and no yes. `SETUP.md` said to write
+nothing until the summary was confirmed, but had no path for a skip, so the summary went
+with the rounds.
+
+Choice. `SETUP.md` gives the skip its own steps: fill what can be derived, make every
+other answer a labelled default (a limiting one listed with its `A-N`), show the same one
+summary, and ask one yes before any file is written or anything is created. A partial
+answer takes the same path. The summary ends with the account setup on its own lines
+(owner, remote, email, visibility), and step 4 starts only after that yes. A lighter
+path that skipped the summary when the developer asks for speed was rejected: the repo
+and its owner are the one thing that is hard to take back.
+
+**Consequence:** a developer who skips still answers one question. A test keeps the skip
+section before the summary, the four account lines in it, and the yes before `gh repo
+create`.
+
+**Still open:** whether Phase 0 needs a lighter path for a developer who asked for
+defaults. Opening it cost about $7 in the same run; the README and setup's last step now
+say so, and agent behaviour is unchanged.

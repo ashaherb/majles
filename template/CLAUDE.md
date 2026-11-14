@@ -9,8 +9,10 @@ Otherwise, this project was just created from the Majles template and is not set
 up yet. Before any other work, follow `SETUP.md` in this project. In short:
 
 1. Get the project description from the developer.
-2. Interview them in five short rounds, confirm one summary, then fill every
-   `{{PLACEHOLDER}}`.
+2. Interview them in five short rounds; if they skip the questions, draft
+   labelled defaults instead. Either way, show one summary with the account
+   setup (owner, remote, email, visibility), and get their yes before writing
+   any file or creating the repo. Then fill every `{{PLACEHOLDER}}`.
 3. Turn modules on or off with `majles`.
 4. Create the repo, unless the project was adopted and has one.
 5. Publish the decision log.

@@ -93,7 +93,11 @@ Claude follows `SETUP.md`, in order:
    choices where the answers are obvious. It does not ask what you already
    said. It asks a follow-up only when an answer is too vague to check, when
    two answers contradict, or when a wrong guess would be costly, and it says
-   which. Then it shows one summary, and writes nothing until you confirm it.
+   which. Then it shows one summary, ending with the account setup (the
+   owner, the remote, the commit email and the visibility), and writes nothing
+   and creates nothing until you confirm it. If you say "skip the questions",
+   it skips the rounds, not the summary: it fills in what it can, labels every
+   other answer as a default, and still asks for that one yes.
 2. It writes your own words, quoted and dated, in `docs/direction.md`. A rule
    Claude drafted for you is marked "drafted", and never becomes a gate without
    your yes.
@@ -354,11 +358,12 @@ directory. `majles --version` prints the version.
 ## What it costs
 
 Majles is free. The agents run in your Claude Code session, so they use your
-Claude plan. The `majles` command makes no network calls of its own and sends
-nothing anywhere: there is no telemetry. The heavy agents are the Opus ones and
-the 100x-engineer, which runs rarely, before a release. On a smaller plan, move
-those to Sonnet: change the agent's `model:` line, which makes that file yours
-(`majles detach`).
+Claude plan. Opening Phase 0 is the costly step at the start; see
+[Start Phase 0](#5-start-phase-0) for what one run cost. The `majles` command
+makes no network calls of its own and sends nothing anywhere: there is no
+telemetry. The heavy agents are the Opus ones and the 100x-engineer, which runs
+rarely, before a release. On a smaller plan, move those to Sonnet: change the
+agent's `model:` line, which makes that file yours (`majles detach`).
 
 ## Secrets
 
